@@ -19,13 +19,12 @@ function resolveExistingPath(...segments) {
     path.resolve(__dirname, '..', ...segments)
   ];
 
-  const existing = candidates.find((candidate) => fs.existsSync(candidate));
-  return existing || candidates[0];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
 }
 
 function startChild(label, scriptPath, portNumber) {
-  if (!fs.existsSync(scriptPath)) {
-    console.warn(`[${label}] skipped: ${scriptPath} not found`);
+  if (!scriptPath || !fs.existsSync(scriptPath)) {
+    console.warn(`[${label}] skipped: ${scriptPath || 'missing path'} not found`);
     return null;
   }
 
@@ -59,9 +58,13 @@ function stopChildren() {
   });
 }
 
-startChild('auth', resolveExistingPath('Frontend-SignIn', 'server.js'), authPort);
-startChild('forum', resolveExistingPath('Frontend-Forum', 'ForumServer.js'), forumPort);
-startChild('study', resolveExistingPath('Frontend-StudyAss', 'server.js'), studyPort);
+const authScriptPath = resolveExistingPath('Frontend-SignIn', 'server.js');
+const forumScriptPath = resolveExistingPath('Frontend-Forum', 'ForumServer.js');
+const studyScriptPath = resolveExistingPath('Frontend-StudyAss', 'server.js');
+
+startChild('auth', authScriptPath, authPort);
+startChild('forum', forumScriptPath, forumPort);
+startChild('study', studyScriptPath, studyPort);
 
 process.on('SIGINT', () => {
   stopChildren();
@@ -348,13 +351,42 @@ function resolveFilePath(requestedPath) {
   }
 
   const normalized = path.normalize(safePath).replace(/^\.(?:\/|\\|$)/, '');
-  const filePath = path.join(rootDir, normalized);
+  const candidates = [];
 
-  if (!filePath.startsWith(rootDir)) {
-    return null;
+  if (normalized) {
+    candidates.push(path.join(rootDir, normalized));
+    candidates.push(path.join(rootDir, normalized.replace(/^\/+/, '')));
   }
 
-  return filePath;
+  const directCandidate = candidates.find((candidate) => fs.existsSync(candidate));
+  if (directCandidate) {
+    return directCandidate;
+  }
+
+  const relativeSegments = normalized.split(path.sep).filter(Boolean);
+  const fileName = relativeSegments[relativeSegments.length - 1];
+
+  if (fileName) {
+    const walk = (dir) => {
+      if (!fs.existsSync(dir)) return null;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const nested = walk(fullPath);
+          if (nested) return nested;
+        } else if (entry.name === fileName) {
+          return fullPath;
+        }
+      }
+      return null;
+    };
+
+    const found = walk(rootDir);
+    if (found) return found;
+  }
+
+  return null;
 }
 
 const server = http.createServer(async (req, res) => {
