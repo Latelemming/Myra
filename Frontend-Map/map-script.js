@@ -96,7 +96,7 @@ function drawRoute(geojson, destination, label) {
   destinationMarker = L.marker(destination).addTo(map).bindPopup(label).openPopup();
   routeLine = L.geoJSON(geojson, {
     style: {
-      color: '#2563eb',
+      color: '#c0f8ff',
       weight: 5,
       opacity: 0.9
     }
