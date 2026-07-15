@@ -106,7 +106,7 @@ function drawRoute(geojson, destination, label) {
 }
 // initial campus marker
 var campusIcon = L.icon({
-    iconUrl: 'Logo.png',
+    iconUrl: 'Frontend-Forum\Logo.png',
     iconSize: [48, 30],
     iconAnchor: [22, 30],
     popupAnchor: [0, -30]
