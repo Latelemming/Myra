@@ -15,7 +15,7 @@ osmLayer.addTo(map);
 map.locate({ setView: true, maxZoom: 18, enableHighAccuracy: true });
 
 var userIcon = L.icon({
-  iconUrl: 'Frontend-Forum\Logo.png',
+  iconUrl: 'Logo.png',
   iconSize: [48, 30],
   iconAnchor: [20, 20]
 });
@@ -106,7 +106,7 @@ function drawRoute(geojson, destination, label) {
 }
 // initial campus marker
 var campusIcon = L.icon({
-    iconUrl: 'Frontend-Forum\Logo.png',
+    iconUrl: 'Logo.png',
     iconSize: [48, 30],
     iconAnchor: [22, 30],
     popupAnchor: [0, -30]
