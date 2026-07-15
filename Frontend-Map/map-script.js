@@ -15,7 +15,7 @@ osmLayer.addTo(map);
 map.locate({ setView: true, maxZoom: 18, enableHighAccuracy: true });
 
 var userIcon = L.icon({
-  iconUrl: 'logo.png',
+  iconUrl: 'Logo.png',
   iconSize: [48, 30],
   iconAnchor: [20, 20]
 });
@@ -104,6 +104,13 @@ function drawRoute(geojson, destination, label) {
 
   map.fitBounds(routeLine.getBounds(), { padding: [80, 80] });
 }
+// initial campus marker
+var campusIcon = L.icon({
+    iconUrl: 'Logo.png',
+    iconSize: [48, 30],
+    iconAnchor: [22, 30],
+    popupAnchor: [0, -30]
+});
 
 function toggleLayer() {
   if (currentLayer === 'osm') {
@@ -359,13 +366,6 @@ searchInput.addEventListener('keypress', function(event) {
   }
 });
 
-// initial campus marker
-var campusIcon = L.icon({
-    iconUrl: 'logo.png',
-    iconSize: [48, 30],
-    iconAnchor: [22, 30],
-    popupAnchor: [0, -30]
-});
 
 for (var loc in campusLocations) {
   (function(name) {
