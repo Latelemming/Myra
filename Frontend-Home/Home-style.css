@@ -18,9 +18,6 @@ body {
 button, a {
   font: inherit;
 }
-body {
-  padding-bottom: 120px;
-}
 .app-shell {
   max-width: 1180px;
   margin: 0 auto;
