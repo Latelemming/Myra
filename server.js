@@ -12,7 +12,23 @@ const studyPort = process.env.STUDY_PORT || 3103;
 
 const childProcesses = [];
 
+function resolveExistingPath(...segments) {
+  const candidates = [
+    path.join(__dirname, ...segments),
+    path.join(process.cwd(), ...segments),
+    path.resolve(__dirname, '..', ...segments)
+  ];
+
+  const existing = candidates.find((candidate) => fs.existsSync(candidate));
+  return existing || candidates[0];
+}
+
 function startChild(label, scriptPath, portNumber) {
+  if (!fs.existsSync(scriptPath)) {
+    console.warn(`[${label}] skipped: ${scriptPath} not found`);
+    return null;
+  }
+
   const child = spawn(process.execPath, [scriptPath], {
     cwd: path.dirname(scriptPath),
     env: { ...process.env, PORT: String(portNumber) },
@@ -43,9 +59,9 @@ function stopChildren() {
   });
 }
 
-startChild('auth', path.join(rootDir, 'Frontend-SignIn', 'server.js'), authPort);
-startChild('forum', path.join(rootDir, 'Frontend-Forum', 'ForumServer.js'), forumPort);
-startChild('study', path.join(rootDir, 'Frontend-StudyAss', 'server.js'), studyPort);
+startChild('auth', resolveExistingPath('Frontend-SignIn', 'server.js'), authPort);
+startChild('forum', resolveExistingPath('Frontend-Forum', 'ForumServer.js'), forumPort);
+startChild('study', resolveExistingPath('Frontend-StudyAss', 'server.js'), studyPort);
 
 process.on('SIGINT', () => {
   stopChildren();
@@ -442,6 +458,12 @@ const server = http.createServer(async (req, res) => {
       });
       return res.end(fileBuffer);
     }
+  }
+
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    res.writeHead(302, { Location: '/Frontend-Splash/Splash.html' });
+    res.end();
+    return;
   }
 
   const filePath = resolveFilePath(url.pathname);
