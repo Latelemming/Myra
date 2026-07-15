@@ -13,6 +13,7 @@ html, body {
 }
 body {
   background: url('Background.png');
+  width: 100vw;
 }
 button, a {
   font: inherit;
