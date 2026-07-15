@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: myra-campus
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PORT
+        value: 10000
+      - key: AUTH_PORT
+        value: 3101
+      - key: FORUM_PORT
+        value: 3102
+      - key: STUDY_PORT
+        value: 3103

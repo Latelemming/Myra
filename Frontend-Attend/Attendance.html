@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MYRA Attendance</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="../site-style.css" />
+    <link rel="stylesheet" href="Attend-style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script defer src="Attend-script.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero-header">
+        <div>
+          <p class="eyebrow"><strong>Attendance</strong></p>
+          <h1>Mark and manage class attendance</h1>
+          <p class="subtitle">Lecturers generate a QR code, students scan it, and the attendance list updates live.</p>
+        </div>
+      </header>
+
+
+      <div class="view-panels">
+        <section class="card view-panel" id="studentViewPanel" data-view-panel="student">
+          <div class="card-header">
+            <h2>Student view</h2>
+            <p>Scan the QR code shared by your lecturer to mark attendance.</p>
+          </div>
+
+          <div class="student-panel">
+            <div class="student-meta" id="studentMeta">Loading profile…</div>
+
+            <div id="reader" class="scanner-reader"></div>
+
+            <div class="actions-row">
+              <button id="startCameraBtn" class="primary-btn">Start camera</button>
+              <button id="stopCameraBtn" class="secondary-btn">Stop camera</button>
+            </div>
+
+            <div class="input-stack">
+              <label for="studentNameInput">Your name</label>
+              <input id="studentNameInput" type="text" placeholder="Enter your name" />
+            </div>
+
+            <div class="input-stack">
+              <label for="sessionCodeInput">Session code</label>
+              <input id="sessionCodeInput" type="text" placeholder="Or enter the code manually" />
+              <p class="status-text">Scan the lecturer QR code or paste the session code here.</p>
+            </div>
+
+            <button id="markAttendanceBtn" class="primary-btn wide">Mark attendance</button>
+            <p id="studentStatus" class="status-text">Point the camera at the lecturer's QR code.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Primary navigation">
+      <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+      <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+      <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+      <a href="Attendance.html" class="bottom-link active" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+      <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+      <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+      <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+    </nav>
+    <script src="../Frontend-Attend/attendance-nav.js"></script>
+  </body>
+</html>

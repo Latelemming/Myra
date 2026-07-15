@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MYRA Attendance | Lecturer</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="../site-style.css" />
+    <link rel="stylesheet" href="Attend-style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script defer src="Lecturer-script.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero-header">
+        <div>
+          <p class="eyebrow"><strong>Attendance</strong></p>
+          <h1>Generate QR codes and manage attendance</h1>
+          <p class="subtitle">Create a new session, share the QR code with students, and export the attendance list when class ends.</p>
+        </div>
+    
+      </header>
+
+      <section class="card lecturer-card">
+        <div class="card-header">
+          <h2>Lecturer view</h2>
+          <p>Create a session QR code and collect the students who scan it.</p>
+        </div>
+
+        <div class="lecturer-panel">
+          <button id="generateQrBtn" class="primary-btn">Generate new QR code</button>
+          <div class="qr-box" id="qrBox">
+            <div id="qrContainer" class="qr-container"></div>
+          </div>
+          <label class="field-label" for="qrTextInput">QR content</label>
+          <input id="qrTextInput" type="text" placeholder="Enter text or a session code" />
+          <div class="session-code">
+            <span>Session code</span>
+            <strong id="sessionCodeLabel">—</strong>
+          </div>
+
+          <div class="session-code">
+            <span>Attendance number</span>
+            <input id="attendanceNumberInput" type="number" min="1" step="1" placeholder="e.g. 1" />
+          </div>
+
+          <div class="session-code">
+            <span>Students marked</span>
+            <strong id="attendanceCountLabel">0</strong>
+          </div>
+
+          <div class="export-actions">
+            <button id="startAttendanceBtn" class="primary-btn">Start attendance</button>
+            <button id="endAttendanceBtn" class="secondary-btn danger">End attendance</button>
+            <button id="downloadCsvBtn" class="secondary-btn">Download TXT</button>
+            <button id="downloadPdfBtn" class="secondary-btn">Download PDF</button>
+            <button id="resetSessionBtn" class="secondary-btn danger">Reset list</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Index number</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr>
+                  <td colspan="3" class="empty-row">No students have scanned yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Primary navigation">
+      <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+      <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+      <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+      <a href="Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+      <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+      <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+      <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+    </nav>
+    <script src="../Frontend-Attend/attendance-nav.js"></script>
+  </body>
+</html>

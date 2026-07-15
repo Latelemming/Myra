@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lost &amp; Found — MYRA</title>
+<link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+<link rel="stylesheet" href="../site-style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div>
+      <h1>LOST AND<br />FOUND</h1>
+      <p>Find or report lost items</p>
+    </div>
+    <a class="post-btn" href="post.html" id="postBtn">
+      POST <span id="postIcon"></span>
+    </a>
+  </header>
+
+  <div class="search-row">
+    <span id="menuIcon"></span>
+    <input type="text" id="searchInput" placeholder="Search item" />
+    <span id="searchIcon"></span>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="chip active" data-filter="all">All</button>
+    <button class="chip" data-filter="lost">Lost Items</button>
+    <button class="chip" data-filter="found">Found Items</button>
+  </div>
+
+  <main class="item-list" id="itemList">
+    <!-- Items will be dynamically added here -->
+  </main>
+
+  
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<nav class="bottom-nav" aria-label="Primary navigation">
+  <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+  <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+  <a href="LostFound.html" class="bottom-link active"><img src="../Images/Box.png" alt="Lost and Found"></a>
+  <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+  <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+  <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+  <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+</nav>
+
+<script src="icons.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="../Frontend-Attend/attendance-nav.js"></script>
+</body>
+</html>

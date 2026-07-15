@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Post Item — Lost &amp; Found — MYRA</title>
+<link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+<link rel="stylesheet" href="../site-style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+
+
+  <div class="form-wrap">
+    <a href="LostFound.html" class="back-link"><span id="backIcon"></span> Back</a>
+
+   
+    <form class="form-card" id="postForm" novalidate>
+
+      <div class="field" id="statusField">
+        <label for="statusSelect">Select status</label>
+        <select id="statusSelect" required>
+          <option value="" disabled>Choose lost or found</option>
+          <option value="lost" selected>Lost</option>
+          <option value="found">Found</option>
+        </select>
+        <div class="field-error-msg">Please select a status.</div>
+      </div>
+
+      <div class="field" id="nameField">
+        <label for="itemName">Enter item name</label>
+        <input type="text" id="itemName" placeholder="eg. Umbrella" required />
+        <div class="field-error-msg">Item name is required.</div>
+      </div>
+
+      <button type="button" class="add-image-btn" id="addImageBtn">
+        <span class="plus-circle" id="addImageIcon"></span> Add image
+      </button>
+      <input type="file" id="imageInput" accept="image/*" style="display:none" />
+      <div class="image-preview" id="imagePreview">
+        <img id="imagePreviewImg" src="" alt="Selected item" />
+        <div class="remove-image" id="removeImage">&times;</div>
+      </div>
+
+      <div class="field" id="descField">
+        <label for="itemDesc">Description</label>
+        <textarea id="itemDesc" placeholder="Provide details about the item" required></textarea>
+        <div class="field-error-msg">Please add a short description.</div>
+      </div>
+
+      <div class="field" id="locationField">
+        <label for="itemLocation">Location</label>
+        <input type="text" id="itemLocation" placeholder="Where was it found" required />
+        <div class="field-error-msg">Location is required.</div>
+      </div>
+
+      <div class="field" id="contactField">
+        <label for="itemContact">Contact number</label>
+        <input type="tel" id="itemContact" placeholder="+233------" required />
+        <div class="field-error-msg">Enter a valid Ghana number, e.g. +233201234567.</div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Post item</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+
+
+<script src="icons.js"></script>
+<script src="data.js"></script>
+<script src="form.js"></script>
+</body>
+</html>

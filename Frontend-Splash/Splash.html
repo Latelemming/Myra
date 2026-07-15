@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MYRA | Smart Campus Splash</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="Splash-styles.clean.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a href="#" class="brand">MYRA</a>
+        <span class="status-pill">Your Campus Simplified</span>
+      </header>
+
+      <main class="hero">
+        <section class="hero-copy">
+          <p class="eyebrow">Smart student guide</p>
+          <h1>Stay connected <span>and informed</span>.</h1>
+          <p class="description">
+            Reach study materials, attendance, discussions, and campus updates in one calm and simple place.
+          </p>
+
+          <div class="actions">
+            <a class="btn btn-primary">Navigate Through Campus</a>
+            <a href="#" class="btn btn-secondary">Speak to Myra</a>
+          </div>
+
+          <div class="stats">
+            <div>
+              <strong>120+</strong>
+              <span>Resources</span>
+            </div>
+            <div>
+              <strong>Live</strong>
+              <span>Locations</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>Support</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="hero-card" aria-label="Choose your role">
+          
+          <p class="prompt">What are you?</p>
+          <p class="prompt-main">I am a:</p>
+
+          <div class="roles" role="radiogroup" aria-label="Select your role">
+            <button class="role-card student selected" type="button" role="radio" aria-checked="true" data-role="student">
+              <p class="role-name">Student</p>
+              <p class="role-desc">Access notes, attendance, discussions, and more.</p>
+            </button>
+
+            <button class="role-card lecturer" type="button" role="radio" aria-checked="false" data-role="lecturer">
+              <p class="role-name">Lecturer</p>
+              <p class="role-desc">Share materials, manage classes, and stay organized.</p>
+            </button>
+          </div>
+
+          <div class="continue-wrap">
+            <button class="continue-btn show" id="continueBtn" type="button">Continue as Student</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="Splash-script.js"></script>
+  </body>
+</html>

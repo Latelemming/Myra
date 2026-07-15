@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MYRA | Sign Up</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="Signup-style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <button class="back-btn" type="button" onclick="window.safeNavigate('../Frontend-Splash/Splash.html')">← Back</button>
+      <div class="card">
+        <div class="brand-block">
+          <p class="eyebrow">Create account</p>
+          <h1>Join <span>MYRA</span></h1>
+          <p class="subtitle">Create your campus account and access your personalized dashboard.</p>
+        </div>
+
+        <form id="signupForm" class="signup-form">
+          <label class="field">
+            <span>Full name</span>
+            <input id="fullName" name="fullName" type="text" placeholder="Your full name" required />
+          </label>
+
+          <label class="field">
+            <span>Email</span>
+            <input id="email" name="email" type="email" placeholder="name@campus.edu" required />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input id="password" name="password" type="password" placeholder="Create a password" required />
+          </label>
+
+          <label class="field">
+            <span>I am a</span>
+            <select id="role" name="role" required>
+              <option value="student">Student</option>
+              <option value="lecturer">Lecturer</option>
+            </select>
+          </label>
+
+          <label class="field student-only">
+            <span>Programme</span>
+            <input id="programme" name="programme" type="text" placeholder="e.g. Computer Science" />
+          </label>
+
+          <label class="field student-only">
+            <span>Level</span>
+            <input id="level" name="level" type="text" placeholder="e.g. 200" />
+          </label>
+
+          <label class="field student-only">
+            <span>Index number</span>
+            <input id="indexNumber" name="indexNumber" type="text" placeholder="e.g. 12345678" />
+          </label>
+
+          <button type="submit" class="submit-btn">Create account</button>
+        </form>
+
+        <p id="message" class="message" aria-live="polite"></p>
+        <p class="helper-text">Already have an account? <a href="Signin.html">Sign in</a></p>
+      </div>
+    </div>
+
+    <script>
+      window.safeNavigate = function (path) {
+        const target = new URL(path, window.location.href);
+
+        if (window.location.protocol === 'file:') {
+          target.protocol = 'http:';
+          target.host = 'localhost:3000';
+          target.port = '3000';
+        }
+
+        window.location.assign(target.toString());
+      };
+    </script>
+    <script src="Signup-script.js"></script>
+  </body>
+</html>

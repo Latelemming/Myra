@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home</title>
+  <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+  <link rel="stylesheet" href="../site-style.css">
+  <link rel="stylesheet" href="Home-style.css">
+</head>
+<body data-page-title="Home">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="greeting-block">
+          <p id="greetingText" class="greeting">Good Morning!</p>
+          <p id="userDetailsText" class="subtitle">Loading your details...</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="dropdown-wrap">
+          <button id="notificationsButton" class="icon-button" aria-label="Notifications">
+            <img src="../Frontend-Forum/LogoS.png" alt="Notifications" class="notification-icon" />
+            <span id="notificationBadge" class="notification-badge">0</span>
+          </button>
+          <div id="notificationsPanel" class="dropdown-panel" hidden>
+            <div class="dropdown-header">
+              <strong>Notifications</strong>
+              <span class="dropdown-help">Recent activity in MYRA</span>
+            </div>
+            <div id="notificationsList" class="dropdown-list"></div>
+          </div>
+        </div>
+        <div class="profile-menu-wrap">
+          <button id="profileButton" class="avatar-button" aria-label="Profile">S</button>
+          <div id="profileMenu" class="profile-menu" hidden>
+            <p id="profileNameLabel" class="profile-name">Guest</p>
+            <p id="profileRoleLabel" class="profile-role">Guest access</p>
+            <button id="profileViewButton" class="menu-btn" type="button">View overview</button>
+            <button id="logoutButton" class="logout-btn" type="button">Log out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="site-top-nav" aria-label="Site navigation">
+      <a href="Home.html" class="nav-item active">
+        <img src="../Images/Home.png" alt="Home">
+        <span>Home</span>
+      </a>
+      <a href="../Frontend-Forum/Forum.html" class="nav-item">
+        <img src="../Images/Bubble.png" alt="Forum">
+        <span>Forum</span>
+      </a>
+      <a href="../Frontend-LostFound/LostFound.html" class="nav-item">
+        <img src="../Images/Box.png" alt="Lost and Found">
+        <span>Lost &amp; Found</span>
+      </a>
+      <a href="../Frontend-Attend/Attendance.html" class="nav-item" data-role-nav="attendance">
+        <img src="../Images/QR.png" alt="Attendance">
+        <span>Attendance</span>
+      </a>
+      <a href="../Frontend-Map/map.html" class="nav-item">
+        <img src="../Images/Location.png" alt="Map">
+        <span>Map</span>
+      </a>
+      <a href="../Frontend-Acada/Academic.html" class="nav-item">
+        <img src="../Images/OpenBook.png" alt="Academic Materials">
+        <span>Materials</span>
+      </a>
+      <a href="../Frontend-StudyAss/AI.html" class="nav-item">
+        <img src="../Images/AI.png" alt="Study Assistant">
+        <span>Study Assistant</span>
+      </a>
+    </nav>
+
+    <main class="content">
+      <section class="hero-card">
+        <div>
+          <p class="eyebrow">What’s the plan for today?</p>
+          <h1>Campus Dashboard</h1>
+          <p class="hero-text">Use your timetable and recently visited pages to stay on track today.</p>
+        </div>
+      </section>
+
+      <section class="grid-block">
+        <article class="card schedule-card">
+          <div class="card-header">
+            <div>
+              <p class="card-title">Today’s Schedule</p>
+              <p class="card-subtitle">Timetable overview</p>
+            </div>
+            <span class="badge">Updated</span>
+          </div>
+          <img src="Timetable.png" alt="Schedule timetable" class="schedule-image">
+          <p class="schedule-note">Tap or scroll the timetable to review today’s sessions.</p>
+        </article>
+
+        <article class="card recents-card">
+          <div class="card-header">
+            <div>
+              <p class="card-title">Recent Activities</p>
+              <p class="card-subtitle">What is happening across MYRA right now</p>
+            </div>
+            <span class="badge accent">Live</span>
+          </div>
+          <div id="recentList" class="recent-list">
+            <p class="empty-state">Visit other pages to see recent activity here.</p>
+          </div>
+        </article>
+      </section>
+      </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Primary navigation">
+    <a href="Home.html" class="bottom-link active"><img src="../Images/Home.png" alt="Home"></a>
+    <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+    <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+    <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+    <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+    <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+    <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+  </nav>
+
+  <script src="Home-script.js"></script>
+  <script src="../Frontend-Attend/attendance-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+The data layer is deliberately separated from the UI layer
+
+data.js owns everything about where items live and how they're
+fetched/stored. app.js and form.js own the DOM — reading form
+fields, rendering cards, showing toasts, validating input.
+
+Neither UI file talks to a server or an array directly. They only ever
+call getItems() or createItem(payload). This means: when the backend
+exists, only data.js changes. Nothing in app.js or form.js needs to
+be touched.
+
+
+//getItem has been made async to make things easy in the implementation of the backend
+
+
+//id and date are also auto generated this function must be moved and connected from the backend
+
+xss protection from user input data
+
+I will update the read me later.
+Going to prepare for quiz 😂
+
+
+
+
+
+
+    

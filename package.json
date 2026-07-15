@@ -1,0 +1,19 @@
+{
+  "name": "myra-campus-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MYRA campus web app with auth, forum, study assistant, and static pages",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "workspaces": [
+    "Frontend-SignIn",
+    "Frontend-StudyAss",
+    "Frontend-Forum"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.8.2"
+}

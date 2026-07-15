@@ -1,0 +1,13 @@
+{
+  "name": "frontend-forum",
+  "version": "1.0.0",
+  "description": "Node.js backend for the student forum with PostgreSQL storage",
+  "main": "ForumServer.js",
+  "scripts": {
+    "start": "node ForumServer.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "pg": "^8.12.0"
+  }
+}

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Upload Material — MYRA</title>
+<link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+<link rel="stylesheet" href="../site-style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <div class="form-wrap">
+    <header class="header">
+      <a href="Academic.html" class="back-link"><span id="backIcon">&#x2190;</span> Back</a>
+      <div>
+        <h1>Upload<br />Material</h1>
+        <p>Share learning materials</p>
+        
+      </div>
+    </header>
+
+    <form class="form-card" id="uploadForm" novalidate>
+
+      <div class="field" id="courseField">
+        <label for="courseInput">Course</label>
+        <input id="courseInput" name="course" type="text" list="courseSuggestions" placeholder="Type a course name" required />
+        <datalist id="courseSuggestions"></datalist>
+        <div class="field-error-msg">Please enter a course.</div>
+      </div>
+
+      <div class="field" id="titleField">
+        <label for="materialTitle">Material title</label>
+        <input type="text" id="materialTitle" placeholder="eg. Introduction to Algorithms" required />
+        <div class="field-error-msg">Material title is required.</div>
+      </div>
+
+      <div class="field" id="descField">
+        <label for="materialDesc">Description</label>
+        <textarea id="materialDesc" placeholder="Briefly describe this material" required></textarea>
+        <div class="field-error-msg">Please add a short description.</div>
+      </div>
+
+      <div class="field" id="categoryField">
+        <label for="categorySelect">Type</label>
+        <select id="categorySelect" required>
+          <option value="lecture" selected>Study material</option>
+          <option value="assignment">Assignment</option>
+        </select>
+      </div>
+
+      <div class="field" id="dueDateField" style="display:none">
+        <label for="dueDateInput">Due date</label>
+        <input type="text" id="dueDateInput" placeholder="YYYY-MM-DD" />
+        <div class="field-error-msg">Please provide a valid due date.</div>
+      </div>
+
+      <div class="dropzone-wrap" id="dropzoneWrap">
+        <div class="dropzone" id="dropzone">
+          <div class="plus-circle" id="uploadIconCircle"></div>
+          <div class="dropzone-label">Upload</div>
+          <div class="dropzone-filename" id="dropzoneFilename"></div>
+        </div>
+        <input type="file" id="fileInput" style="display:none" />
+        <div class="field-error-msg">Please attach a file.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-upload" id="submitBtn">Upload</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<nav class="bottom-nav" aria-label="Primary navigation">
+  <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+  <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+  <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+  <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+  <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+  <a href="Academic.html" class="bottom-link active"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+  <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+</nav>
+
+<script src="icons.js"></script>
+<script src="data.js"></script>
+<script src="form.js"></script>
+<script src="../Frontend-Attend/attendance-nav.js"></script>
+</body>
+</html>

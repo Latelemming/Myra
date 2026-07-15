@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Forum</title>
+        <link rel="icon" type="image/png" href="LogoS.png" />
+        <link rel="stylesheet" href="../site-style.css">
+        <link rel="stylesheet" href="Forum-style.css">
+    </head>
+
+<body>
+
+    <div class="mobile">
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="title">
+                <h1>STUDENT<br>FORUM</h1>
+                <p>Ask questions you don't get the chance to ask in class.</p>
+            </div>
+
+            
+        </div>
+
+        <!-- SEARCH -->
+        <div class="search-box">
+            <input type="text" placeholder="SEARCH ITEM" id="searchInput">
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="active" data-filter="all">All <span class="tab-count" id="allCount">0</span></button>
+            <button data-filter="answered">Answered <span class="tab-count" id="answeredCount">0</span></button>
+            <button data-filter="pending">Pending <span class="tab-count" id="pendingCount">0</span></button>
+        </div>
+
+        <form class="composer" id="questionForm">
+            <h3>Ask a new question</h3>
+            <input id="questionTitle" type="text" placeholder="Question title" required>
+            <textarea id="questionBody" placeholder="Write your question here..." required></textarea>
+            <div class="composer-actions">
+                <select id="questionTag">
+                    <option value="DATABASES">DATABASES</option>
+                    <option value="PROGRAMMING">PROGRAMMING</option>
+                    <option value="DATA STRUCTURES">DATA STRUCTURES</option>
+                    <option value="MATHEMATICS">MATHEMATICS</option>
+                </select>
+                <button type="submit">Post Question</button>
+            </div>
+        </form>
+
+        <div id="questionsContainer"></div>
+
+    </div> <!-- END MOBILE -->
+
+    <nav class="bottom-nav" aria-label="Primary navigation">
+        <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+        <a href="Forum.html" class="bottom-link active"><img src="../Images/Bubble.png" alt="Forum"></a>
+        <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+        <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+        <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+        <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+        <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+    </nav>
+
+    <!-- REPLY MODAL -->
+    <div class="reply-modal" id="replyModal">
+        <div class="reply-modal-content">
+            <h3>Reply to: <span id="replyQuestionTitle">Question</span></h3>
+            <textarea id="replyText" placeholder="Type your reply here..."></textarea>
+            <div class="reply-modal-buttons">
+                <button class="cancel-reply" onclick="closeReplyModal()">Cancel</button>
+                <button class="submit-reply" onclick="submitReply()">Submit Reply</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="Forum-script.js"></script>
+    <script src="../Frontend-Attend/attendance-nav.js"></script>
+
+</body>
+
+</html>

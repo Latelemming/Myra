@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS questions (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  author TEXT NOT NULL DEFAULT 'You',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status TEXT NOT NULL DEFAULT 'pending',
+  answer TEXT,
+  reply_count INTEGER NOT NULL DEFAULT 0
+);

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MYRA | Sign In</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="Signin-style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <button class="back-btn" type="button" onclick="window.safeNavigate('../Frontend-Splash/Splash.html')">← Back</button>
+      <div class="card">
+        <div class="brand-block">
+          <p class="eyebrow">Welcome back</p>
+          <h1>Sign in as <span id="roleTitle">Student</span></h1>
+          <p class="subtitle">Access your campus tools and stay connected with MYRA.</p>
+        </div>
+
+        <form id="signinForm" class="signin-form">
+          <label class="field">
+            <span>Email</span>
+            <input id="email" type="email" placeholder="name@campus.edu" required />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input id="password" type="password" placeholder="Enter your password" required />
+          </label>
+
+          <button type="submit" class="submit-btn">Continue</button>
+          <button type="button" id="guestButton" class="guest-btn">Continue as Guest</button>
+        </form>
+
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+        <p class="helper-text">
+          Not registered yet?
+          <a href="Signup.html" class="register-link">Register here</a>
+        </p>
+        <p class="helper-text">Need help? Contact your campus admin or use the student support desk.</p>
+      </div>
+    </div>
+
+    <script>
+      window.safeNavigate = function (path) {
+        const target = new URL(path, window.location.href);
+
+        if (window.location.protocol === 'file:') {
+          target.protocol = 'http:';
+          target.host = 'localhost:3000';
+          target.port = '3000';
+        }
+
+        window.location.assign(target.toString());
+      };
+    </script>
+    <script src="Signin-script.js"></script>
+  </body>
+</html>
