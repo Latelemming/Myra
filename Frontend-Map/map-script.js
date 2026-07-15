@@ -15,7 +15,7 @@ osmLayer.addTo(map);
 map.locate({ setView: true, maxZoom: 18, enableHighAccuracy: true });
 
 var userIcon = L.icon({
-  iconUrl: 'Logo.png',
+  iconUrl: 'Frontend-Forum\Logo.png',
   iconSize: [48, 30],
   iconAnchor: [20, 20]
 });
