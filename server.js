@@ -500,7 +500,8 @@ const server = http.createServer(async (req, res) => {
 
   const filePath = resolveFilePath(url.pathname);
   if (!filePath) {
-    res.writeHead(403); res.end('Forbidden');
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Not found');
     return;
   }
 
