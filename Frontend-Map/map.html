@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--imports-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+      
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    <!--Ends here-->
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="../site-style.css">
+    <link rel="stylesheet" href="map-style.css">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Map</title>
+</head>
+<body>
+    <div class="map-container">
+        <div class="map-topbar">
+            <div class="logo"><strong>CAMPUS MAP</strong></div>
+            <div class="search-group">
+                <div class="search-card">
+                    <span class="search-icon">🔍</span>
+                    <input id="search-input" type="text" placeholder="Search places or addresses">
+                </div>
+                <div id="search-suggestions" class="search-suggestions" aria-label="Search suggestions"></div>
+                <div class="quick-icons">
+                    <button class="quick-btn">Administration</button>
+                    <button class="quick-btn">AppLab</button>
+                    <button class="quick-btn">Library</button>
+                    <button class="quick-btn">LT Block</button>
+                    <button class="quick-btn">LTS Block</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="locations-panel" id="locations-panel">
+            <div class="locations-panel-header">
+                <div>
+                    <h3>All locations</h3>
+                    <span>Tap to view</span>
+                </div>
+                <button id="locations-panel-toggle" class="panel-toggle-btn" type="button" aria-expanded="true">−</button>
+            </div>
+            <div id="locations-list" class="locations-list"></div>
+        </div>
+
+        <div class="map-control-panel">
+            <button id="btn-location" class="control-btn">My location</button>
+            <button id="btn-directions" class="control-btn">Directions</button>
+        </div>
+    </div>
+    <nav class="bottom-nav" aria-label="Primary navigation">
+        <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+        <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+        <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+        <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+        <a href="map.html" class="bottom-link active"><img src="../Images/Location.png" alt="Map"></a>
+        <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+        <a href="../Frontend-StudyAss/AI.html" class="bottom-link"><img src="../Images/AI.png" alt="Study Assistant"></a>
+    </nav>
+    <script src="map-script.js"></script>
+    <script src="../Frontend-Attend/attendance-nav.js"></script>
+</body>
+</html>

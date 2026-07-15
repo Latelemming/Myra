@@ -233,14 +233,15 @@ document.getElementById('replyModal').addEventListener('click', function (e) {
 questionForm.addEventListener('submit', async function (e) {
     e.preventDefault();
 
+    const tagValue = questionTagInput.value.trim();
     const newQuestion = {
         title: questionTitleInput.value.trim(),
         body: questionBodyInput.value.trim(),
-        tag: questionTagInput.value,
+        tag: tagValue || 'General',
         author: 'You'
     };
 
-    if (!newQuestion.title || !newQuestion.body) return;
+    if (!newQuestion.title || !newQuestion.body || !tagValue) return;
 
     try {
         const response = await fetch('/api/questions', {

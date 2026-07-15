@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myra Study Assistant</title>
+    <link rel="icon" type="image/png" href="../Frontend-Forum/LogoS.png" />
+    <link rel="stylesheet" href="../site-style.css">
+    <link rel="stylesheet" href="AI-style.css">
+</head>
+<body data-page="scan">
+    <div class="page-shell">
+        <div class="app-card">
+            <div class="header">
+                <div class="brand-block">
+                    <div class="brand-badge"><img src="LogoS.png" alt="Brand Icon"></div>
+                    <div>
+                        <h2><strong>MYRA</strong><span>Study Assistant</span></h2>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="clear-history-btn" type="button">Clear History</button>
+                </div>
+            </div>
+
+            <div id="chatbox" class="chatbox" aria-live="polite"></div>
+
+            <div class="composer">
+                
+                    <button id="upload-btn" type="button">+</button>
+                <div class="UserThing">
+                    <input type="text" id="user-input" placeholder="Ask a homework question...">
+                    <input type="file" id="file-input" accept=".txt,.md,.json,.csv,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.rtf,.html,.htm,.xml" hidden>
+                </div>
+                <button id="send-btn" type="button">Send</button>
+                </div>
+            </div>
+            <div id="upload-status" class="upload-status">No document attached</div>
+        </div>  
+    </div>
+    <nav class="bottom-nav" aria-label="Primary navigation">
+        <a href="../Frontend-Home/Home.html" class="bottom-link"><img src="../Images/Home.png" alt="Home"></a>
+        <a href="../Frontend-Forum/Forum.html" class="bottom-link"><img src="../Images/Bubble.png" alt="Forum"></a>
+        <a href="../Frontend-LostFound/LostFound.html" class="bottom-link"><img src="../Images/Box.png" alt="Lost and Found"></a>
+        <a href="../Frontend-Attend/Attendance.html" class="bottom-link" data-role-nav="attendance"><img src="../Images/QR.png" alt="Attendance"></a>
+        <a href="../Frontend-Map/map.html" class="bottom-link"><img src="../Images/Location.png" alt="Map"></a>
+        <a href="../Frontend-Acada/Academic.html" class="bottom-link"><img src="../Images/OpenBook.png" alt="Academic Materials"></a>
+        <a href="AI.html" class="bottom-link active"><img src="../Images/AI.png" alt="Study Assistant"></a>
+    </nav>
+
+   <script src="AI-script.js"></script>
+   <script src="../Frontend-Attend/attendance-nav.js"></script>
+</body>
+</html>
