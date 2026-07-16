@@ -73,7 +73,7 @@ body {
 
 /* Bottom nav normalized */
 .bottom-nav {
-  position: sticky;
+  position: fixed;
   bottom: 5px;
 	left: 50%;
   transform: translateX(-50%);
@@ -87,7 +87,7 @@ body {
   background: rgba(135, 210, 235, 0.22);
   border: 1px solid rgba(3, 105, 161, 0.18);
   border-radius: 999px;
-
+	z-index:1000;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(10px);
 }
