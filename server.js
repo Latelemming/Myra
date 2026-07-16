@@ -562,7 +562,7 @@ const server = http.createServer(async (req, res) => {
     ensureMaterialsStore();
     const materials = readMaterialsStore();
     const courseMap = new Map();
-
+  }
   if (url.pathname === '/api/materials' && req.method === 'GET') {
     const materials = readMaterialsStore();
     return sendJson(res, 200, { materials });
