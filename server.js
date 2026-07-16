@@ -91,6 +91,10 @@ const materialsDir = path.join(rootDir, 'uploads', 'materials');
 const materialsDbPath = path.join(rootDir, 'Frontend-Acada', 'materials.db');
 const materialsDb = new DatabaseSync(materialsDbPath);
 
+const lostFoundDir = path.join(rootDir, 'uploads', 'lostfound');
+const lostFoundDbPath = path.join(rootDir, 'Frontend-LostFound', 'lostfound.db');
+const lostFoundDb = new DatabaseSync(lostFoundDbPath);
+
 function ensureMaterialsStore() {
   fs.mkdirSync(materialsDir, { recursive: true });
   materialsDb.exec(`
@@ -106,6 +110,27 @@ function ensureMaterialsStore() {
       filePath TEXT NOT NULL,
       uploadedAt TEXT NOT NULL,
       fileType TEXT NOT NULL
+    )
+  `);
+}
+
+function ensureLostFoundStore() {
+  fs.mkdirSync(lostFoundDir, { recursive: true });
+  lostFoundDb.exec(`
+    CREATE TABLE IF NOT EXISTS lost_found_posts (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK (status IN ('lost', 'found')),
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      location TEXT NOT NULL,
+      date TEXT NOT NULL,
+      posted_by TEXT NOT NULL,
+      posted_by_name TEXT NOT NULL,
+      contact TEXT NOT NULL,
+      image_filename TEXT,
+      image_path TEXT,
+      image_url TEXT,
+      created_at TEXT NOT NULL
     )
   `);
 }
@@ -133,24 +158,98 @@ function readMaterialsStore() {
   }));
 }
 
-function writeMaterialRecord(record) {
-  ensureMaterialsStore();
-  materialsDb.prepare(`
-    INSERT INTO materials (id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+function readLostFoundStore() {
+  ensureLostFoundStore();
+  const rows = lostFoundDb.prepare(`
+    SELECT id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at
+    FROM lost_found_posts
+    ORDER BY created_at DESC
+  `).all();
+
+  return rows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    name: row.name,
+    description: row.description,
+    location: row.location,
+    date: row.date,
+    postedBy: row.posted_by_name,
+    postedByUser: row.posted_by,
+    contact: row.contact,
+    imageFilename: row.image_filename || '',
+    imagePath: row.image_path || '',
+    imageUrl: row.image_url || '',
+    createdAt: row.created_at
+  }));
+}
+
+function writeLostFoundRecord(record) {
+  ensureLostFoundStore();
+  lostFoundDb.prepare(`
+    INSERT INTO lost_found_posts (id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     record.id,
-    record.title,
+    record.status,
+    record.name,
     record.description,
-    record.course,
-    record.category,
-    record.dueDate,
-    record.professor,
-    record.fileName,
-    record.filePath,
-    record.uploadedAt,
-    record.fileType
+    record.location,
+    record.date,
+    record.postedByUser,
+    record.postedBy,
+    record.contact,
+    record.imageFilename,
+    record.imagePath,
+    record.imageUrl,
+    record.createdAt
   );
+}
+
+function deleteLostFoundRecord(id) {
+  ensureLostFoundStore();
+  const existing = lostFoundDb.prepare('SELECT posted_by, image_path FROM lost_found_posts WHERE id = ?').get(id);
+  if (!existing) {
+    return { deleted: false, row: null };
+  }
+
+  if (existing.image_path && fs.existsSync(existing.image_path)) {
+    try {
+      fs.unlinkSync(existing.image_path);
+    } catch (error) {
+      console.warn('Could not remove lostfound image:', error.message);
+    }
+  }
+
+  const result = lostFoundDb.prepare('DELETE FROM lost_found_posts WHERE id = ?').run(id);
+  return { deleted: result.changes > 0, row: existing };
+}
+
+function buildLostFoundRecord(payload, fileInfo, currentUser) {
+  const id = `lostfound-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const safeName = fileInfo ? path.basename(fileInfo.filename) : '';
+  const storedFileName = fileInfo ? `${id}-${safeName}` : '';
+  const storedPath = fileInfo ? path.join(lostFoundDir, storedFileName) : '';
+  if (fileInfo) {
+    fs.writeFileSync(storedPath, fileInfo.data);
+  }
+
+  const now = new Date().toISOString();
+
+  return {
+    id,
+    status: payload.status || 'lost',
+    name: payload.name || 'Untitled item',
+    description: payload.description || '',
+    location: payload.location || '',
+    date: payload.date || now.slice(0, 10),
+    postedBy: payload.postedBy || currentUser?.fullName || 'You',
+    postedByUser: currentUser?.email || payload.postedByUser || 'guest@myra.local',
+    contact: payload.contact || '',
+    imageFilename: safeName || null,
+    imagePath: storedPath || null,
+    imageUrl: fileInfo ? `/uploads/lostfound/${storedFileName}` : null,
+    createdAt: now
+  };
 }
 
 function deleteMaterialRecord(id) {
@@ -404,26 +503,65 @@ const server = http.createServer(async (req, res) => {
     return proxyRequest(studyPort, req, res);
   }
 
+  if (url.pathname === '/api/lostfound' && req.method === 'GET') {
+    const items = readLostFoundStore();
+    return sendJson(res, 200, { items });
+  }
+
+  if (url.pathname === '/api/lostfound' && req.method === 'POST') {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return sendJson(res, 400, { error: 'Expected multipart form upload.' });
+    }
+
+    parseMultipartForm(req, contentType)
+      .then(async ({ payload, file }) => {
+        const currentUser = await getCurrentUserFromRequest(req);
+        if (!payload.status || !payload.name || !payload.description || !payload.location || !payload.contact) {
+          return sendJson(res, 400, { error: 'All required fields must be provided.' });
+        }
+
+        const record = buildLostFoundRecord(payload, file, currentUser);
+        writeLostFoundRecord(record);
+        return sendJson(res, 200, { item: record });
+      })
+      .catch((error) => {
+        sendJson(res, 400, { error: error.message || 'Unable to save item.' });
+      });
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/lostfound/')) {
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (req.method === 'DELETE' && parts.length === 2) {
+      const id = parts[1];
+      const currentUser = await getCurrentUserFromRequest(req);
+      const headerUser = String(req.headers['x-current-user'] || '').trim();
+      const requester = currentUser?.email || headerUser;
+
+      ensureLostFoundStore();
+      const existing = lostFoundDb.prepare('SELECT posted_by FROM lost_found_posts WHERE id = ?').get(id);
+      if (!existing) {
+        return sendJson(res, 404, { error: 'Item not found.' });
+      }
+
+      if (!requester || existing.posted_by !== requester) {
+        return sendJson(res, 403, { error: 'Only the user who posted this item can mark it claimed.' });
+      }
+
+      const result = deleteLostFoundRecord(id);
+      if (!result.deleted) {
+        return sendJson(res, 404, { error: 'Item not found.' });
+      }
+
+      return sendJson(res, 200, { success: true, id });
+    }
+  }
+
   if (url.pathname === '/api/materials/courses') {
     ensureMaterialsStore();
     const materials = readMaterialsStore();
     const courseMap = new Map();
-
-    getDefaultCourses().forEach((course) => {
-      courseMap.set(course.name, course);
-    });
-
-    materials.forEach((material) => {
-      if (!courseMap.has(material.course)) {
-        courseMap.set(material.course, {
-          name: material.course,
-          code: material.course.slice(0, 4).toUpperCase()
-        });
-      }
-    });
-
-    return sendJson(res, 200, { courses: Array.from(courseMap.values()) });
-  }
 
   if (url.pathname === '/api/materials' && req.method === 'GET') {
     const materials = readMaterialsStore();

@@ -111,13 +111,14 @@ function wireSubmit() {
     submitBtn.textContent = "Posting…";
 
     const payload = {
-      status: document.getElementById("statusSelect").value,
-      name: document.getElementById("itemName").value.trim(),
-      description: document.getElementById("itemDesc").value.trim(),
-      location: document.getElementById("itemLocation").value.trim(),
-      contact: document.getElementById("itemContact").value.trim(),
-      postedBy: "You",
-      image: selectedImageFile ? selectedImageFile.name : null,
+      status: document.getElementById('statusSelect').value,
+      name: document.getElementById('itemName').value.trim(),
+      description: document.getElementById('itemDesc').value.trim(),
+      location: document.getElementById('itemLocation').value.trim(),
+      contact: document.getElementById('itemContact').value.trim(),
+      postedBy: localStorage.getItem('myra_current_user_name') || 'You',
+      postedByUser: localStorage.getItem('myra_current_user') || 'guest@myra.local',
+      imageFile: selectedImageFile || null,
     };
 
     try {

@@ -35,6 +35,7 @@ function cardTemplate(item) {
       <div class="card-actions">
         <a class="contact-btn" href="tel:${item.contact}">${ICONS.phone} Contact</a>
         ${canClaim ? `<button class="claim-btn" type="button" data-id="${item.id}">Claimed</button>` : ""}
+        <button class="view-btn" type="button" data-id="${item.id}">${ICONS.image} View</button>
       </div>
     </article>
   `;
@@ -85,29 +86,76 @@ function wireFilters() {
 }
 
 function wireSearch() {
-  const input = document.getElementById("searchInput");
-  input.addEventListener("input", (e) => {
+  const input = document.getElementById('searchInput');
+  input.addEventListener('input', (e) => {
     searchTerm = e.target.value;
     renderItems();
   });
 }
 
-function wireItemActions() {
-  const listEl = document.getElementById("itemList");
+function buildItemModal(item) {
+  return `
+    <div class="item-modal" id="itemModal" aria-hidden="false">
+      <div class="modal-backdrop" data-close="true"></div>
+      <div class="modal-card">
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+        ${item.imageUrl ? `<img class="modal-image" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" />` : `<div class="modal-image placeholder">No image available</div>`}
+        <div class="modal-detail">
+          <h2>${escapeHtml(item.name)}</h2>
+          <span class="status-badge ${item.status === 'lost' ? 'is-lost' : 'is-found'}">${item.status.toUpperCase()}</span>
+          <p>${escapeHtml(item.description)}</p>
+          <div class="meta-row">${ICONS.pin}<span>${escapeHtml(item.location)}</span></div>
+          <div class="meta-row">${ICONS.calendar}<span>${formatDate(item.date)}</span></div>
+          <div class="meta-row posted-by">${ICONS.person}<span>Posted by ${escapeHtml(item.postedBy)}</span></div>
+          <div class="meta-row">${ICONS.phone}<span>Contact: ${escapeHtml(item.contact)}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-  listEl.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".claim-btn");
+function openItemModal(item) {
+  closeItemModal();
+  const modalWrapper = document.createElement('div');
+  modalWrapper.innerHTML = buildItemModal(item);
+  document.body.appendChild(modalWrapper.firstElementChild);
+
+  const closeButton = document.getElementById('modalCloseBtn');
+  closeButton?.addEventListener('click', closeItemModal);
+  document.querySelector('.modal-backdrop')?.addEventListener('click', closeItemModal);
+}
+
+function closeItemModal() {
+  const modal = document.getElementById('itemModal');
+  modal?.remove();
+}
+
+function wireItemActions() {
+  const listEl = document.getElementById('itemList');
+
+  listEl.addEventListener('click', async (e) => {
+    const viewBtn = e.target.closest('.view-btn');
+    if (viewBtn) {
+      const itemId = viewBtn.dataset.id;
+      const item = allItems.find((entry) => String(entry.id) === itemId);
+      if (item) {
+        openItemModal(item);
+      }
+      return;
+    }
+
+    const btn = e.target.closest('.claim-btn');
     if (!btn) return;
 
-    const itemId = Number(btn.dataset.id);
-    const item = allItems.find((entry) => entry.id === itemId);
+    const itemId = btn.dataset.id;
+    const item = allItems.find((entry) => String(entry.id) === itemId);
 
-    const currentUser = localStorage.getItem("myra_current_user") || "";
-    const currentRole = localStorage.getItem("myra_current_role") || "";
+    const currentUser = localStorage.getItem('myra_current_user') || '';
+    const currentRole = localStorage.getItem('myra_current_role') || '';
 
-    if (!item || (item.postedBy !== currentUser && item.postedBy !== "You") || currentRole === "lecturer") return;
+    if (!item || (item.postedByUser && item.postedByUser !== currentUser) || (!item.postedByUser && item.postedBy !== currentUser && item.postedBy !== 'You') || currentRole === 'lecturer') return;
 
-    const confirmed = window.confirm("Mark this item as claimed and remove it from the system?");
+    const confirmed = window.confirm('Mark this item as claimed and remove it from the system?');
     if (!confirmed) return;
 
     await deleteItem(itemId);
@@ -129,10 +177,20 @@ async function init() {
     notifyHomeAboutLostFound(latest);
   }
 
-  window.addEventListener("storage", async () => {
+  window.addEventListener('storage', async () => {
     allItems = await getItems();
     renderItems();
   });
+
+  window.addEventListener('focus', async () => {
+    allItems = await getItems();
+    renderItems();
+  });
+
+  setInterval(async () => {
+    allItems = await getItems();
+    renderItems();
+  }, 12000);
 }
 
 document.addEventListener("DOMContentLoaded", init);
