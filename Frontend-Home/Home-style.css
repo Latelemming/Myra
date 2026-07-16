@@ -1,7 +1,7 @@
-﻿:root {
+:root {
   color-scheme: light;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #e8f0fe;
+  background:transparent;
   color: #0f172a;
 }
 * {
@@ -9,19 +9,42 @@
 }
 html, body {
   margin: 0;
-  min-height: 100%;
+
 }
 body {
   background: url('Background.png');
-  width: 100vw;
+	background-attachment: fixed;
 }
 button, a {
   font: inherit;
+}
+body {
+
+}
+.site-top-nav {
+	display:flex;
+	flex-direction: row;
+
+    left: 50%;
+
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0.5rem; /* smaller padding so only inner card shows background */
+    background: #ffffff9c;
+    border-radius: 25px;
+    box-shadow: none;
+    backdrop-filter: none;
+
+    flex-wrap: wrap;
 }
 .app-shell {
   max-width: 1180px;
   margin: 0 auto;
   padding: 24px;
+background:transparent;
 }
 .app-header {
   display: flex;
@@ -167,7 +190,7 @@ button, a {
 }
 .logout-btn {
   background: #e0f2fe;
-  color: #0369a1;
+  color: #ff0000;
 }
 .content {
   display: grid;
