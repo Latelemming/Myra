@@ -75,8 +75,8 @@ body {
 .bottom-nav {
   position: sticky;
   bottom: 5px;
-	
-
+	left: 50%;
+  transform: translateX(-50%);
   width: min(100%, 560px);
   max-width: 460px;
   padding: 7px;
@@ -90,6 +90,12 @@ body {
 
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(10px);
+}
+@media(max-width: 600px){
+	.bottom-nav{
+		transform: translateX(0%);
+		left:0%;
+	}
 }
 .bottom-nav a {
   color: #0f172a;
