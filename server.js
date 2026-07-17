@@ -207,7 +207,7 @@ function writeLostFoundRecord(record) {
 
 function deleteLostFoundRecord(id) {
   ensureLostFoundStore();
-  const existing = lostFoundDb.prepare('SELECT posted_by, image_path FROM lost_found_posts WHERE id = ?').get(id);
+  const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name, image_path FROM lost_found_posts WHERE id = ?').get(id);
   if (!existing) {
     return { deleted: false, row: null };
   }
@@ -222,6 +222,36 @@ function deleteLostFoundRecord(id) {
 
   const result = lostFoundDb.prepare('DELETE FROM lost_found_posts WHERE id = ?').run(id);
   return { deleted: result.changes > 0, row: existing };
+}
+
+function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser) {
+  const requesterValues = [];
+  const storedValues = [];
+
+  const addValue = (target, value) => {
+    const trimmed = String(value || '').trim();
+    if (trimmed) target.push(trimmed.toLowerCase());
+  };
+
+  addValue(requesterValues, currentUser?.email);
+  addValue(requesterValues, currentUser?.fullName);
+  addValue(requesterValues, headerUser);
+
+  if (!requesterValues.length) {
+    return false;
+  }
+
+  addValue(storedValues, existingRow?.posted_by);
+  addValue(storedValues, existingRow?.posted_by_name);
+
+  const hasDirectMatch = storedValues.some((value) => requesterValues.includes(value));
+  if (hasDirectMatch) {
+    return true;
+  }
+
+  const placeholderValues = new Set(['', 'you', 'guest', 'guest@myra.local']);
+  const hasPlaceholderOwner = storedValues.some((value) => placeholderValues.has(value));
+  return hasPlaceholderOwner;
 }
 
 function buildLostFoundRecord(payload, fileInfo, currentUser) {
@@ -490,9 +520,6 @@ function resolveFilePath(requestedPath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const forwardedFor = req.headers['x-forwarded-for'];
-  const ip = forwardedFor ? String(forwardedFor).split(',')[0].trim() : req.socket.remoteAddress || 'unknown';
-  console.log(`[request] IP=${ip} method=${req.method} path=${url.pathname}`);
 
   if (url.pathname.startsWith('/api/signin') || url.pathname.startsWith('/api/signup') || url.pathname.startsWith('/api/guest') || url.pathname.startsWith('/api/me') || url.pathname.startsWith('/api/logout')) {
     return proxyRequest(authPort, req, res);
@@ -543,17 +570,13 @@ const server = http.createServer(async (req, res) => {
       const currentRole = String(req.headers['x-current-role'] || '').trim();
       const requester = currentUser?.email || headerUser;
 
-      const forwardedFor = req.headers['x-forwarded-for'];
-      const ip = forwardedFor ? String(forwardedFor).split(',')[0].trim() : req.socket.remoteAddress || 'unknown';
-      console.log(`[lostfound-delete] IP=${ip} path=${url.pathname} requester=${requester} role=${currentRole} item=${id}`);
-
       ensureLostFoundStore();
-      const existing = lostFoundDb.prepare('SELECT posted_by FROM lost_found_posts WHERE id = ?').get(id);
+      const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name FROM lost_found_posts WHERE id = ?').get(id);
       if (!existing) {
         return sendJson(res, 404, { error: 'Item not found.' });
       }
 
-      if (!requester || existing.posted_by !== requester) {
+      if (!isAuthorizedLostFoundRequester(existing, currentUser, headerUser)) {
         return sendJson(res, 403, { error: 'Only the user who posted this item can mark it claimed.' });
       }
 
