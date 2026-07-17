@@ -378,6 +378,12 @@ select {
   height: 260px;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.modal-image.zoomed {
+  transform: scale(1.8);
+  cursor: zoom-out;
 }
 
 .modal-image.placeholder {

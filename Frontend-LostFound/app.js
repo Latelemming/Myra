@@ -14,8 +14,8 @@ function cardTemplate(item) {
   const statusClass = isLost ? "is-lost" : "is-found";
   const currentUser = localStorage.getItem("myra_current_user") || "";
   const currentRole = localStorage.getItem("myra_current_role") || "";
-  const isOwnPost = item.postedBy === currentUser || item.postedBy === "You";
-  const canClaim = isOwnPost && currentRole !== "lecturer";
+  const isOwnPost = item.postedByUser === currentUser || item.postedBy === currentUser || item.postedBy === "You";
+  const canClaim = isOwnPost;
 
   return `
     <article class="card" data-id="${item.id}">
@@ -123,6 +123,23 @@ function openItemModal(item) {
   const closeButton = document.getElementById('modalCloseBtn');
   closeButton?.addEventListener('click', closeItemModal);
   document.querySelector('.modal-backdrop')?.addEventListener('click', closeItemModal);
+
+  const modalImage = document.querySelector('.modal-image');
+  if (modalImage && !modalImage.classList.contains('placeholder')) {
+    modalImage.style.cursor = 'zoom-in';
+    modalImage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleImageZoom(modalImage);
+    });
+  }
+}
+
+function toggleImageZoom(img) {
+  if (img.classList.contains('zoomed')) {
+    img.classList.remove('zoomed');
+  } else {
+    img.classList.add('zoomed');
+  }
 }
 
 function closeItemModal() {
@@ -153,14 +170,32 @@ function wireItemActions() {
     const currentUser = localStorage.getItem('myra_current_user') || '';
     const currentRole = localStorage.getItem('myra_current_role') || '';
 
-    if (!item || (item.postedByUser && item.postedByUser !== currentUser) || (!item.postedByUser && item.postedBy !== currentUser && item.postedBy !== 'You') || currentRole === 'lecturer') return;
+    if (!item) return;
+
+    const isOwner = item.postedByUser === currentUser || item.postedBy === currentUser || item.postedBy === 'You';
+    if (!isOwner) {
+      window.alert('Only the user who posted this item can mark it as claimed.');
+      return;
+    }
+
+    if (currentRole === 'guest') {
+      const shouldSignIn = window.confirm('You need to sign in to claim this item. Would you like to sign in now?');
+      if (shouldSignIn) {
+        window.location.href = '../Frontend-SignIn/Signin.html';
+      }
+      return;
+    }
 
     const confirmed = window.confirm('Mark this item as claimed and remove it from the system?');
     if (!confirmed) return;
 
-    await deleteItem(itemId);
-    allItems = await getItems();
-    renderItems();
+    try {
+      await deleteItem(itemId);
+      allItems = await getItems();
+      renderItems();
+    } catch (err) {
+      window.alert('Failed to remove item: ' + (err.message || 'unknown error'));
+    }
   });
 }
 

@@ -56,6 +56,12 @@ function createQuestionCard(question) {
         .join('')
         .toUpperCase();
 
+    const currentUser = localStorage.getItem('myra_current_user') || '';
+    const currentRole = (localStorage.getItem('myra_current_role') || '').toLowerCase();
+    const isOwner = question.author === 'You' || currentUser.endsWith(question.postedByEmail) || false;
+    const isLecturer = currentRole === 'lecturer';
+    const canDelete = isOwner || isLecturer;
+
     card.innerHTML = `
         <span class="status ${question.status === 'answered' ? 'answered' : 'pending'}">${question.status === 'answered' ? 'Answered' : 'Pending'}</span>
         <div class="user">
@@ -78,7 +84,7 @@ function createQuestionCard(question) {
         <div class="card-footer">
             <div class="card-actions">
                 <button class="reply" data-question="${question.title}">Reply</button>
-                ${question.author === 'You' ? '<button class="delete-question" type="button">Delete</button>' : ''}
+                ${canDelete ? '<button class="delete-question" type="button">Delete</button>' : ''}
             </div>
             <div class="comments">
                 <i class="fa-solid fa-comment"></i> ${question.replies} Replies
@@ -152,17 +158,28 @@ function attachDeleteHandlers() {
             if (!confirmed) return;
 
             try {
-                const response = await fetch(`/api/questions/${targetQuestion.id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Delete failed');
+                const currentUser = localStorage.getItem('myra_current_user') || '';
+                const currentRole = localStorage.getItem('myra_current_role') || '';
+                const headers = {
+                  'X-Current-User': currentUser,
+                  'X-Current-Role': currentRole
+                };
+                
+                const response = await fetch(`/api/questions/${targetQuestion.id}`, { 
+                  method: 'DELETE',
+                  headers
+                });
+                if (!response.ok) {
+                  const error = await response.json().catch(() => ({}));
+                  throw new Error(error.error || 'Delete failed');
+                }
                 questions = questions.filter(question => String(question.id) !== String(targetQuestion.id));
                 saveLocalQuestions(questions);
                 renderQuestions();
                 alert('Question deleted.');
             } catch (error) {
-                questions = questions.filter(question => String(question.id) !== String(targetQuestion.id));
-                saveLocalQuestions(questions);
-                renderQuestions();
-                alert('Question removed locally.');
+                console.error('Delete error:', error);
+                alert(error.message || 'Failed to delete question');
             }
         });
     });
@@ -244,9 +261,16 @@ questionForm.addEventListener('submit', async function (e) {
     if (!newQuestion.title || !newQuestion.body || !tagValue) return;
 
     try {
+        const currentUser = localStorage.getItem('myra_current_user') || '';
+        const currentRole = localStorage.getItem('myra_current_role') || '';
+        
         const response = await fetch('/api/questions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Current-User': currentUser,
+              'X-Current-Role': currentRole
+            },
             body: JSON.stringify(newQuestion)
         });
 
