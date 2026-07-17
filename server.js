@@ -12,6 +12,7 @@ const studyPort = process.env.STUDY_PORT || 3103;
 
 const childProcesses = [];
 //
+const express = require('express');
 const app = express();
 app.use(express.json());
 
