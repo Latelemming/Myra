@@ -490,6 +490,9 @@ function resolveFilePath(requestedPath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const ip = forwardedFor ? String(forwardedFor).split(',')[0].trim() : req.socket.remoteAddress || 'unknown';
+  console.log(`[request] IP=${ip} method=${req.method} path=${url.pathname}`);
 
   if (url.pathname.startsWith('/api/signin') || url.pathname.startsWith('/api/signup') || url.pathname.startsWith('/api/guest') || url.pathname.startsWith('/api/me') || url.pathname.startsWith('/api/logout')) {
     return proxyRequest(authPort, req, res);
@@ -536,8 +539,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'DELETE' && parts.length === 2) {
       const id = parts[1];
       const currentUser = await getCurrentUserFromRequest(req);
-      const headerUser = String(req.headers['x-current-user'] || '').trim();
+      const headerUser = String(req.headers['x-current-user'] || 'guest@myra.local').trim();
+      const currentRole = String(req.headers['x-current-role'] || '').trim();
       const requester = currentUser?.email || headerUser;
+
+      const forwardedFor = req.headers['x-forwarded-for'];
+      const ip = forwardedFor ? String(forwardedFor).split(',')[0].trim() : req.socket.remoteAddress || 'unknown';
+      console.log(`[lostfound-delete] IP=${ip} path=${url.pathname} requester=${requester} role=${currentRole} item=${id}`);
 
       ensureLostFoundStore();
       const existing = lostFoundDb.prepare('SELECT posted_by FROM lost_found_posts WHERE id = ?').get(id);
