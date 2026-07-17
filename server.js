@@ -11,6 +11,9 @@ const forumPort = process.env.FORUM_PORT || 3102;
 const studyPort = process.env.STUDY_PORT || 3103;
 
 const childProcesses = [];
+//
+const app = express();
+app.use(express.json());
 
 //custom middleware (Visit log)
 app.use((req, res) => {
