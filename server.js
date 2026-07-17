@@ -12,6 +12,12 @@ const studyPort = process.env.STUDY_PORT || 3103;
 
 const childProcesses = [];
 
+//custom middleware (Visit log)
+app.use((req, res) => {
+	console.log(`${req.method} $req.url} - ${new Date().toISOString()}`);
+});
+
+
 function resolveExistingPath(...segments) {
   const candidates = [
     path.join(__dirname, ...segments),
