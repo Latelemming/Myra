@@ -15,7 +15,7 @@ function cardTemplate(item) {
   const currentUser = localStorage.getItem("myra_current_user") || "";
   const currentRole = localStorage.getItem("myra_current_role") || "";
   const isOwnPost = item.postedByUser === currentUser || item.postedBy === currentUser || item.postedBy === "You";
-  const canClaim = isOwnPost;
+  const canDelete = isOwnPost;
 
   return `
     <article class="card" data-id="${item.id}">
@@ -34,7 +34,7 @@ function cardTemplate(item) {
       </div>
       <div class="card-actions">
         <a class="contact-btn" href="tel:${item.contact}">${ICONS.phone} Contact</a>
-        ${canClaim ? `<button class="claim-btn" type="button" data-id="${item.id}">Claimed</button>` : ""}
+        ${canDelete ? `<button class="claim-btn" type="button" data-id="${item.id}">Delete</button>` : ""}
         <button class="view-btn" type="button" data-id="${item.id}">${ICONS.image} View</button>
       </div>
     </article>
@@ -174,7 +174,7 @@ function wireItemActions() {
 
     const isOwner = item.postedByUser === currentUser || item.postedBy === currentUser || item.postedBy === 'You';
     if (!isOwner) {
-      window.alert('Only the user who posted this item can mark it as claimed.');
+      window.alert('Only the user who posted this item can delete it.');
       return;
     }
 
@@ -186,7 +186,7 @@ function wireItemActions() {
       return;
     }
 
-    const confirmed = window.confirm('Mark this item as claimed and remove it from the system?');
+    const confirmed = window.confirm('Delete this post permanently?');
     if (!confirmed) return;
 
     try {
