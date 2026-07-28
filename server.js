@@ -609,8 +609,8 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname.startsWith('/api/lostfound/')) {
     const parts = url.pathname.split('/').filter(Boolean);
-    if (req.method === 'DELETE' && parts.length === 2) {
-      const id = parts[1];
+    if (req.method === 'DELETE' && parts.length === 3) {
+      const id = parts[2];
       const currentUser = await getCurrentUserFromRequest(req);
       const headerUser = String(req.headers['x-current-user'] || '').trim();
       const headerName = String(req.headers['x-current-user-name'] || '').trim();
