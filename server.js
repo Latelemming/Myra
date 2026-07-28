@@ -261,7 +261,7 @@ function deleteLostFoundRecord(id) {
   return { deleted: result.changes > 0, row: existing };
 }
 
-function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser) {
+function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser, currentRole) {
   const requesterValues = [];
   const storedValues = [];
 
@@ -274,7 +274,7 @@ function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser) {
   addValue(requesterValues, currentUser?.fullName);
   addValue(requesterValues, headerUser);
 
-  if (!requesterValues.length) {
+  if (!requesterValues.length && !currentRole) {
     return false;
   }
 
@@ -288,7 +288,11 @@ function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser) {
 
   const placeholderValues = new Set(['', 'you', 'guest', 'guest@myra.local']);
   const hasPlaceholderOwner = storedValues.some((value) => placeholderValues.has(value));
-  return hasPlaceholderOwner;
+  if (!hasPlaceholderOwner) {
+    return false;
+  }
+
+  return String(currentRole || '').trim().toLowerCase() === 'guest' || headerUser.trim().toLowerCase() === 'guest@myra.local';
 }
 
 function buildLostFoundRecord(payload, fileInfo, currentUser) {
@@ -617,7 +621,6 @@ const server = http.createServer(async (req, res) => {
       const currentUser = await getCurrentUserFromRequest(req);
       const headerUser = String(req.headers['x-current-user'] || 'guest@myra.local').trim();
       const currentRole = String(req.headers['x-current-role'] || '').trim();
-      const requester = currentUser?.email || headerUser;
 
       ensureLostFoundStore();
       const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name FROM lost_found_posts WHERE id = ?').get(id);
@@ -625,8 +628,8 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { error: 'Item not found.' });
       }
 
-      if (!isAuthorizedLostFoundRequester(existing, currentUser, headerUser)) {
-        return sendJson(res, 403, { error: 'Only the user who posted this item can mark it claimed.' });
+      if (!isAuthorizedLostFoundRequester(existing, currentUser, headerUser, currentRole)) {
+        return sendJson(res, 403, { error: 'Only the user who posted this item can delete it.' });
       }
 
       const result = deleteLostFoundRecord(id);

@@ -178,8 +178,9 @@ function wireItemActions() {
       return;
     }
 
-    if (currentRole === 'guest') {
-      const shouldSignIn = window.confirm('You need to sign in to claim this item. Would you like to sign in now?');
+    const isGuestOwned = item.postedByUser === 'guest@myra.local' || item.postedBy.toLowerCase() === 'guest' || item.postedBy === 'You';
+    if (currentRole === 'guest' && !isGuestOwned) {
+      const shouldSignIn = window.confirm('You need to sign in to delete this item. Would you like to sign in now?');
       if (shouldSignIn) {
         window.location.href = '../Frontend-SignIn/Signin.html';
       }
