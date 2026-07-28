@@ -594,6 +594,9 @@ const server = http.createServer(async (req, res) => {
       .then(async ({ payload, file }) => {
         try {
           const currentUser = await getCurrentUserFromRequest(req);
+          if (!currentUser?.email) {
+            return sendJson(res, 401, { error: 'You must sign in before posting lost and found items.' });
+          }
           if (!payload.status || !payload.name || !payload.description || !payload.location || !payload.contact) {
             return sendJson(res, 400, { error: 'All required fields must be provided.' });
           }

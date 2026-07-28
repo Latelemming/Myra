@@ -168,22 +168,12 @@ function wireItemActions() {
     const item = allItems.find((entry) => String(entry.id) === itemId);
 
     const currentUser = localStorage.getItem('myra_current_user') || '';
-    const currentRole = localStorage.getItem('myra_current_role') || '';
 
     if (!item) return;
 
     const isOwner = item.postedByUser === currentUser || item.postedBy === currentUser || item.postedBy === 'You';
     if (!isOwner) {
       window.alert('Only the user who posted this item can delete it.');
-      return;
-    }
-
-    const isGuestOwned = item.postedByUser === 'guest@myra.local' || item.postedBy.toLowerCase() === 'guest' || item.postedBy === 'You';
-    if (currentRole === 'guest' && !isGuestOwned) {
-      const shouldSignIn = window.confirm('You need to sign in to delete this item. Would you like to sign in now?');
-      if (shouldSignIn) {
-        window.location.href = '../Frontend-SignIn/Signin.html';
-      }
       return;
     }
 
