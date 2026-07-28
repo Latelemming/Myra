@@ -99,7 +99,9 @@ async function createItem(payload) {
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error((body && body.error) || 'Could not create item.');
+    const error = new Error((body && body.error) || 'Could not create item.');
+    error.status = response.status;
+    throw error;
   }
 
   const data = await response.json();

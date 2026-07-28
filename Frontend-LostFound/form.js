@@ -141,9 +141,15 @@ function wireSubmit() {
         window.location.href = "LostFound.html";
       }, 900);
     } catch (err) {
-      showToast("Something went wrong. Try again.");
+      const message = err?.message || 'Something went wrong. Try again.';
+      showToast(message);
       submitBtn.disabled = false;
       submitBtn.textContent = "Post item";
+      if (err?.status === 401) {
+        setTimeout(() => {
+          window.location.href = '../Frontend-SignIn/Signin.html';
+        }, 1200);
+      }
     }
   });
 }
