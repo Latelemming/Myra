@@ -261,7 +261,7 @@ function deleteLostFoundRecord(id) {
   return { deleted: result.changes > 0, row: existing };
 }
 
-function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser, currentRole) {
+function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser, headerName) {
   const requesterValues = [];
   const storedValues = [];
 
@@ -273,26 +273,16 @@ function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser, cu
   addValue(requesterValues, currentUser?.email);
   addValue(requesterValues, currentUser?.fullName);
   addValue(requesterValues, headerUser);
+  addValue(requesterValues, headerName);
 
-  if (!requesterValues.length && !currentRole) {
+  if (!requesterValues.length) {
     return false;
   }
 
   addValue(storedValues, existingRow?.posted_by);
   addValue(storedValues, existingRow?.posted_by_name);
 
-  const hasDirectMatch = storedValues.some((value) => requesterValues.includes(value));
-  if (hasDirectMatch) {
-    return true;
-  }
-
-  const placeholderValues = new Set(['', 'you', 'guest', 'guest@myra.local']);
-  const hasPlaceholderOwner = storedValues.some((value) => placeholderValues.has(value));
-  if (!hasPlaceholderOwner) {
-    return false;
-  }
-
-  return String(currentRole || '').trim().toLowerCase() === 'guest' || headerUser.trim().toLowerCase() === 'guest@myra.local';
+  return storedValues.some((value) => requesterValues.includes(value));
 }
 
 function buildLostFoundRecord(payload, fileInfo, currentUser) {
@@ -622,8 +612,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'DELETE' && parts.length === 2) {
       const id = parts[1];
       const currentUser = await getCurrentUserFromRequest(req);
-      const headerUser = String(req.headers['x-current-user'] || 'guest@myra.local').trim();
-      const currentRole = String(req.headers['x-current-role'] || '').trim();
+      const headerUser = String(req.headers['x-current-user'] || '').trim();
+      const headerName = String(req.headers['x-current-user-name'] || '').trim();
 
       ensureLostFoundStore();
       const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name FROM lost_found_posts WHERE id = ?').get(id);
@@ -631,7 +621,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { error: 'Item not found.' });
       }
 
-      if (!isAuthorizedLostFoundRequester(existing, currentUser, headerUser, currentRole)) {
+      if (!isAuthorizedLostFoundRequester(existing, currentUser, headerUser, headerName)) {
         return sendJson(res, 403, { error: 'Only the user who posted this item can delete it.' });
       }
 
