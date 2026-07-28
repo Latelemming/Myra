@@ -105,6 +105,21 @@ const lostFoundDir = path.join(rootDir, 'uploads', 'lostfound');
 const lostFoundDbPath = path.join(rootDir, 'Frontend-LostFound', 'lostfound.db');
 const lostFoundDb = new DatabaseSync(lostFoundDbPath);
 
+// Initialize databases on startup
+try {
+  ensureMaterialsStore();
+  console.log('[Server] Materials database initialized');
+} catch (error) {
+  console.warn('[Server] Warning initializing materials database:', error.message);
+}
+
+try {
+  ensureLostFoundStore();
+  console.log('[Server] Lost & Found database initialized');
+} catch (error) {
+  console.warn('[Server] Warning initializing lost & found database:', error.message);
+}
+
 function ensureMaterialsStore() {
   fs.mkdirSync(materialsDir, { recursive: true });
   materialsDb.exec(`
@@ -169,50 +184,62 @@ function readMaterialsStore() {
 }
 
 function readLostFoundStore() {
-  ensureLostFoundStore();
-  const rows = lostFoundDb.prepare(`
-    SELECT id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at
-    FROM lost_found_posts
-    ORDER BY created_at DESC
-  `).all();
+  try {
+    ensureLostFoundStore();
+    const rows = lostFoundDb.prepare(`
+      SELECT id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at
+      FROM lost_found_posts
+      ORDER BY created_at DESC
+    `).all();
+    console.log(`[LostFound] Retrieved ${rows ? rows.length : 0} items from database`);
 
-  return rows.map((row) => ({
-    id: row.id,
-    status: row.status,
-    name: row.name,
-    description: row.description,
-    location: row.location,
-    date: row.date,
-    postedBy: row.posted_by_name,
-    postedByUser: row.posted_by,
-    contact: row.contact,
-    imageFilename: row.image_filename || '',
-    imagePath: row.image_path || '',
-    imageUrl: row.image_url || '',
-    createdAt: row.created_at
-  }));
+    return rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      name: row.name,
+      description: row.description,
+      location: row.location,
+      date: row.date,
+      postedBy: row.posted_by_name,
+      postedByUser: row.posted_by,
+      contact: row.contact,
+      imageFilename: row.image_filename || '',
+      imagePath: row.image_path || '',
+      imageUrl: row.image_url || '',
+      createdAt: row.created_at
+    }));
+  } catch (error) {
+    console.error('[LostFound] Error reading store:', error);
+    throw error;
+  }
 }
 
 function writeLostFoundRecord(record) {
-  ensureLostFoundStore();
-  lostFoundDb.prepare(`
-    INSERT INTO lost_found_posts (id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    record.id,
-    record.status,
-    record.name,
-    record.description,
-    record.location,
-    record.date,
-    record.postedByUser,
-    record.postedBy,
-    record.contact,
-    record.imageFilename,
-    record.imagePath,
-    record.imageUrl,
-    record.createdAt
-  );
+  try {
+    ensureLostFoundStore();
+    lostFoundDb.prepare(`
+      INSERT INTO lost_found_posts (id, status, name, description, location, date, posted_by, posted_by_name, contact, image_filename, image_path, image_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      record.id,
+      record.status,
+      record.name,
+      record.description,
+      record.location,
+      record.date,
+      record.postedByUser,
+      record.postedBy,
+      record.contact,
+      record.imageFilename,
+      record.imagePath,
+      record.imageUrl,
+      record.createdAt
+    );
+    console.log(`[LostFound] Item saved: ${record.id}`);
+  } catch (error) {
+    console.error('[LostFound] Error writing record:', error);
+    throw error;
+  }
 }
 
 function deleteLostFoundRecord(id) {
@@ -544,8 +571,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/lostfound' && req.method === 'GET') {
-    const items = readLostFoundStore();
-    return sendJson(res, 200, { items });
+    try {
+      const items = readLostFoundStore();
+      return sendJson(res, 200, { items });
+    } catch (error) {
+      console.error('Error reading lost & found items:', error);
+      return sendJson(res, 500, { error: 'Failed to fetch items' });
+    }
   }
 
   if (url.pathname === '/api/lostfound' && req.method === 'POST') {
@@ -556,16 +588,23 @@ const server = http.createServer(async (req, res) => {
 
     parseMultipartForm(req, contentType)
       .then(async ({ payload, file }) => {
-        const currentUser = await getCurrentUserFromRequest(req);
-        if (!payload.status || !payload.name || !payload.description || !payload.location || !payload.contact) {
-          return sendJson(res, 400, { error: 'All required fields must be provided.' });
-        }
+        try {
+          const currentUser = await getCurrentUserFromRequest(req);
+          if (!payload.status || !payload.name || !payload.description || !payload.location || !payload.contact) {
+            return sendJson(res, 400, { error: 'All required fields must be provided.' });
+          }
 
-        const record = buildLostFoundRecord(payload, file, currentUser);
-        writeLostFoundRecord(record);
-        return sendJson(res, 200, { item: record });
+          const record = buildLostFoundRecord(payload, file, currentUser);
+          writeLostFoundRecord(record);
+          console.log('[LostFound] POST successful for item:', record.id);
+          return sendJson(res, 200, { item: record });
+        } catch (error) {
+          console.error('[LostFound] Error processing POST:', error.message);
+          return sendJson(res, 400, { error: error.message || 'Unable to save item.' });
+        }
       })
       .catch((error) => {
+        console.error('[LostFound] Parse or request error:', error.message);
         sendJson(res, 400, { error: error.message || 'Unable to save item.' });
       });
     return;
