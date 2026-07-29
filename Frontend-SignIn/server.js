@@ -2,11 +2,19 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { Pool } = require('pg');
 const { DatabaseSync } = require('node:sqlite');
 
 const rootDir = path.resolve(__dirname, '..');
 const dbPath = path.join(rootDir, 'Frontend-SignIn', 'users.db');
-const db = new DatabaseSync(dbPath);
+const usePostgres = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim());
+const sqliteDb = usePostgres ? null : new DatabaseSync(dbPath);
+const postgresPool = usePostgres
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    })
+  : null;
 const sessions = new Map();
 
 function hashPassword(password) {
@@ -47,10 +55,27 @@ function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', 'sid=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
 }
 
-function ensureUserSchema() {
-  const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
+async function ensureUserSchema() {
+  if (usePostgres) {
+    await postgresPool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        programme TEXT,
+        level TEXT,
+        index_number TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `);
+    return;
+  }
+
+  const tableExists = sqliteDb.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
   if (!tableExists) {
-    db.exec(`
+    sqliteDb.exec(`
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT NOT NULL,
@@ -66,16 +91,41 @@ function ensureUserSchema() {
     return;
   }
 
-  const columns = db.prepare('PRAGMA table_info(users)').all().map((column) => column.name);
+  const columns = sqliteDb.prepare('PRAGMA table_info(users)').all().map((column) => column.name);
   if (!columns.includes('programme')) {
-    db.exec('ALTER TABLE users ADD COLUMN programme TEXT');
+    sqliteDb.exec('ALTER TABLE users ADD COLUMN programme TEXT');
   }
   if (!columns.includes('level')) {
-    db.exec('ALTER TABLE users ADD COLUMN level TEXT');
+    sqliteDb.exec('ALTER TABLE users ADD COLUMN level TEXT');
   }
   if (!columns.includes('index_number')) {
-    db.exec('ALTER TABLE users ADD COLUMN index_number TEXT');
+    sqliteDb.exec('ALTER TABLE users ADD COLUMN index_number TEXT');
   }
+}
+
+async function findUserByEmail(email) {
+  if (usePostgres) {
+    const result = await postgresPool.query(
+      'SELECT id, full_name, email, role, password, programme, level, index_number FROM users WHERE email = $1',
+      [email]
+    );
+    return result.rows[0] || null;
+  }
+
+  return sqliteDb.prepare('SELECT id, full_name, email, role, password, programme, level, index_number FROM users WHERE email = ?').get(email);
+}
+
+async function createUser(fullName, email, hashedPassword, role, programme, level, indexNumber) {
+  if (usePostgres) {
+    await postgresPool.query(
+      'INSERT INTO users (full_name, email, password, role, programme, level, index_number) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [fullName, email, hashedPassword, role, programme || null, level || null, indexNumber || null]
+    );
+    return;
+  }
+
+  const statement = sqliteDb.prepare('INSERT INTO users (full_name, email, password, role, programme, level, index_number) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  statement.run(fullName, email, hashedPassword, role, programme || null, level || null, indexNumber || null);
 }
 
 ensureUserSchema();
@@ -106,7 +156,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/signup') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const data = JSON.parse(body || '{}');
         const fullName = String(data.fullName || '').trim();
@@ -121,9 +171,12 @@ const server = http.createServer((req, res) => {
           return sendJson(res, 400, { error: 'Please provide a valid name, email, password, and role.' });
         }
 
-        const statement = db.prepare('INSERT INTO users (full_name, email, password, role, programme, level, index_number) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        statement.run(fullName, email, hashPassword(password), role, programme || null, level || null, indexNumber || null);
+        const existingUser = await findUserByEmail(email);
+        if (existingUser) {
+          return sendJson(res, 409, { error: 'An account with this email already exists.' });
+        }
 
+        await createUser(fullName, email, hashPassword(password), role, programme, level, indexNumber);
         return sendJson(res, 201, { success: true, role, fullName });
       } catch (error) {
         if (String(error.message).includes('UNIQUE')) {
@@ -138,7 +191,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/signin') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const data = JSON.parse(body || '{}');
         const email = String(data.email || '').trim().toLowerCase();
@@ -149,7 +202,7 @@ const server = http.createServer((req, res) => {
           return sendJson(res, 400, { error: 'Please provide your email and password.' });
         }
 
-        const row = db.prepare('SELECT id, full_name, email, role, password, programme, level, index_number FROM users WHERE email = ?').get(email);
+        const row = await findUserByEmail(email);
         if (!row) {
           return sendJson(res, 401, { error: 'Invalid email or password.' });
         }
