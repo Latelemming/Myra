@@ -29,6 +29,7 @@ function createSession() {
   state.activeSessionId = sessionId;
   state.sessions[sessionId] = {
     id: sessionId,
+    code: sessionId,
     createdAt: new Date().toISOString(),
     students: [],
     attendanceOpen: false,
@@ -57,6 +58,13 @@ function getActiveSession() {
   return state.sessions[state.activeSessionId] || null;
 }
 
+function getSessionByCode(value) {
+  const state = getState();
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  return Object.values(state.sessions).find((session) => String(session.code || session.id) === normalized) || null;
+}
+
 function renderQrCode(value) {
   const container = document.getElementById('qrContainer');
   if (!container) return;
@@ -81,9 +89,8 @@ function renderQrCode(value) {
 }
 
 function openQrFullscreen() {
-  const input = document.getElementById('qrTextInput');
   const label = document.getElementById('sessionCodeLabel');
-  const value = (input?.value || label?.textContent || '').trim();
+  const value = (label?.textContent || '').trim();
 
   if (!value || !window.QRCode) return;
 
@@ -138,13 +145,9 @@ function renderLecturer() {
     return;
   }
 
-  if (label) label.textContent = session.id;
+  const activeValue = session.code || session.id;
+  if (label) label.textContent = activeValue;
   if (input && !input.value) {
-    input.value = session.id;
-  }
-
-  const activeValue = input?.value || session.id;
-  if (input && input.value !== session.id) {
     input.value = activeValue;
   }
 
@@ -229,6 +232,18 @@ function startAttendance() {
   const session = state.sessions[state.activeSessionId];
   if (!session) return;
 
+  const code = String(session.code || session.id).trim();
+  const inputValue = document.getElementById('qrTextInput')?.value.trim();
+  if (!code) {
+    alert('Set a session code before starting attendance.');
+    return;
+  }
+
+  if (inputValue && inputValue !== code) {
+    alert('Please confirm the QR code before starting attendance.');
+    return;
+  }
+
   session.attendanceOpen = true;
   saveState(state);
   renderLecturer();
@@ -275,18 +290,22 @@ function initialize() {
   });
 
   const input = document.getElementById('qrTextInput');
-  input?.addEventListener('input', () => {
-    const value = input.value.trim();
-    const label = document.getElementById('sessionCodeLabel');
-    if (label) label.textContent = value || '—';
-    renderQrCode(value);
-  });
-
-  input?.addEventListener('change', () => {
-    const value = input.value.trim();
-    const label = document.getElementById('sessionCodeLabel');
-    if (label) label.textContent = value || '—';
-    renderQrCode(value);
+  document.getElementById('confirmCodeBtn')?.addEventListener('click', () => {
+    const value = input?.value.trim();
+    const state = getState();
+    const session = state.sessions[state.activeSessionId];
+    if (!session) return;
+    if (!value) {
+      alert('Enter a session code before confirming.');
+      return;
+    }
+    if (session.attendanceOpen) {
+      alert('Stop the current attendance before changing the code.');
+      return;
+    }
+    session.code = value;
+    saveState(state);
+    renderLecturer();
   });
 
   const attendanceNumberInput = document.getElementById('attendanceNumberInput');

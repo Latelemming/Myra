@@ -99,7 +99,9 @@ async function createItem(payload) {
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error((body && body.error) || 'Could not create item.');
+    const error = new Error((body && body.error) || 'Could not create item.');
+    error.status = response.status;
+    throw error;
   }
 
   const data = await response.json();
@@ -113,12 +115,12 @@ async function createItem(payload) {
 
 async function deleteItem(id) {
   const currentUser = localStorage.getItem('myra_current_user') || 'guest@myra.local';
-  const currentRole = localStorage.getItem('myra_current_role') || 'guest';
+  const currentUserName = localStorage.getItem('myra_current_user_name') || '';
   const response = await fetch(`${API_LOSTFOUND}/${id}`, {
     method: 'DELETE',
     headers: {
       'X-Current-User': currentUser,
-      'X-Current-Role': currentRole,
+      'X-Current-User-Name': currentUserName,
     },
     credentials: 'include',
   });

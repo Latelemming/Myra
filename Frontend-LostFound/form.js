@@ -102,6 +102,14 @@ function wireSubmit() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    // Prevent guests from posting — require sign in
+    const currentRole = String(localStorage.getItem('myra_current_role') || 'guest').toLowerCase();
+    if (currentRole === 'guest') {
+      showToast('Please sign in to post. Redirecting...');
+      setTimeout(() => window.location.href = '../Frontend-SignIn/Signin.html', 700);
+      return;
+    }
+
     if (!validateForm()) {
       showToast("Please fix the highlighted fields.");
       return;
@@ -133,9 +141,15 @@ function wireSubmit() {
         window.location.href = "LostFound.html";
       }, 900);
     } catch (err) {
-      showToast("Something went wrong. Try again.");
+      const message = err?.message || 'Something went wrong. Try again.';
+      showToast(message);
       submitBtn.disabled = false;
       submitBtn.textContent = "Post item";
+      if (err?.status === 401) {
+        setTimeout(() => {
+          window.location.href = '../Frontend-SignIn/Signin.html';
+        }, 1200);
+      }
     }
   });
 }

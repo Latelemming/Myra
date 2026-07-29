@@ -47,17 +47,15 @@ function renderStudentProfile() {
   }
 }
 
-function markAttendance(sessionId, name, indexNumber = '') {
+function markAttendance(sessionCode, name, indexNumber = '') {
   const state = getState();
-  const normalizedSessionId = String(sessionId || '').trim();
+  const normalizedSessionCode = String(sessionCode || '').trim();
 
-  if (!normalizedSessionId) return false;
+  if (!normalizedSessionCode) return false;
 
-  if (!state.sessions[normalizedSessionId]) {
-    state.sessions[normalizedSessionId] = { id: normalizedSessionId, createdAt: new Date().toISOString(), students: [] };
-  }
+  const session = Object.values(state.sessions).find((entry) => String(entry.code || entry.id) === normalizedSessionCode);
+  if (!session || !session.attendanceOpen) return false;
 
-  const session = state.sessions[normalizedSessionId];
   const normalizedName = name.trim();
   if (!normalizedName) return false;
 
@@ -70,7 +68,7 @@ function markAttendance(sessionId, name, indexNumber = '') {
     });
   }
 
-  state.activeSessionId = normalizedSessionId;
+  state.activeSessionId = session.id;
   saveState(state);
   return true;
 }
@@ -83,11 +81,8 @@ function showStatus(message, isError = false) {
 }
 
 function hasMatchingSession(value) {
-  const state = getState();
-  if (!value) return false;
-  const session = state.sessions?.[value];
-  if (!session) return false;
-  return Boolean(session.attendanceOpen || state.activeSessionId === value);
+  const session = Object.values(getState().sessions).find((entry) => String(entry.code || entry.id) === String(value || '').trim());
+  return Boolean(session?.attendanceOpen);
 }
 
 function onScanSuccess(decodedText) {
