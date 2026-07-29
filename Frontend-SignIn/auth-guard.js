@@ -14,10 +14,21 @@
   fetch('/api/me', { credentials: 'include' })
     .then((response) => {
       if (!response.ok) {
-        redirectToSignin();
+        // If server is down or session expired, allow localStorage-stored
+        // user details to keep the user signed in locally. Only redirect
+        // to the signin page when no stored user info exists.
+        const storedUser = localStorage.getItem('myra_current_user');
+        const storedRole = localStorage.getItem('myra_current_role');
+        if (!storedUser || !storedRole) {
+          redirectToSignin();
+        }
       }
     })
     .catch(() => {
-      redirectToSignin();
+      const storedUser = localStorage.getItem('myra_current_user');
+      const storedRole = localStorage.getItem('myra_current_role');
+      if (!storedUser || !storedRole) {
+        redirectToSignin();
+      }
     });
 })();

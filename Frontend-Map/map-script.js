@@ -15,7 +15,7 @@ osmLayer.addTo(map);
 map.locate({ setView: true, maxZoom: 18, enableHighAccuracy: true });
 
 var userIcon = L.icon({
-  iconUrl: 'Frontend-Forum\Logo.png',
+  iconUrl: 'Logo.png',
   iconSize: [48, 30],
   iconAnchor: [20, 20]
 });
@@ -96,7 +96,7 @@ function drawRoute(geojson, destination, label) {
   destinationMarker = L.marker(destination).addTo(map).bindPopup(label).openPopup();
   routeLine = L.geoJSON(geojson, {
     style: {
-      color: '#2563eb',
+      color: '#c0f8ff',
       weight: 5,
       opacity: 0.9
     }
@@ -106,7 +106,7 @@ function drawRoute(geojson, destination, label) {
 }
 // initial campus marker
 var campusIcon = L.icon({
-    iconUrl: 'Frontend-Forum\Logo.png',
+    iconUrl: 'Logo.png',
     iconSize: [48, 30],
     iconAnchor: [22, 30],
     popupAnchor: [0, -30]

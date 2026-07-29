@@ -14,6 +14,17 @@ const pool = new Pool({
 let useDatabase = false;
 let fallbackQuestions = [];
 
+function getCurrentUserFromHeaders(req) {
+  const authPort = process.env.AUTH_PORT || 3101;
+  const userEmail = req.headers['x-current-user'] || '';
+  const userRole = req.headers['x-current-role'] || 'guest';
+  
+  return {
+    email: userEmail,
+    role: userRole.toLowerCase()
+  };
+}
+
 function toClientQuestion(row) {
   if (!row) return null;
 
@@ -62,12 +73,30 @@ async function initDatabase() {
         body TEXT NOT NULL,
         tag TEXT NOT NULL,
         author TEXT NOT NULL DEFAULT 'You',
+        posted_by_email TEXT,
+        posted_by_role TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         status TEXT NOT NULL DEFAULT 'pending',
         answer TEXT,
+        answer_by_email TEXT,
         reply_count INTEGER NOT NULL DEFAULT 0
       )
     `);
+
+    const columns = await pool.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name='questions'`
+    );
+    const columnNames = columns.rows.map(r => r.column_name);
+    if (!columnNames.includes('posted_by_email')) {
+      await pool.query('ALTER TABLE questions ADD COLUMN posted_by_email TEXT');
+    }
+    if (!columnNames.includes('posted_by_role')) {
+      await pool.query('ALTER TABLE questions ADD COLUMN posted_by_role TEXT');
+    }
+    if (!columnNames.includes('answer_by_email')) {
+      await pool.query('ALTER TABLE questions ADD COLUMN answer_by_email TEXT');
+    }
+
     useDatabase = true;
     console.log('Database ready');
   } catch (error) {
@@ -109,6 +138,7 @@ app.get('/api/questions', async (req, res) => {
 
 app.post('/api/questions', async (req, res) => {
   const { title, body, tag, author = 'You' } = req.body;
+  const currentUser = getCurrentUserFromHeaders(req);
 
   if (!title || !body || !tag) {
     return res.status(400).json({ error: 'Title, body, and tag are required' });
@@ -117,10 +147,10 @@ app.post('/api/questions', async (req, res) => {
   if (useDatabase) {
     try {
       const result = await pool.query(
-        `INSERT INTO questions (title, body, tag, author, status, reply_count)
-         VALUES ($1, $2, $3, $4, 'pending', 0)
+        `INSERT INTO questions (title, body, tag, author, posted_by_email, posted_by_role, status, reply_count)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', 0)
          RETURNING id, title, body, tag, author, created_at, status, answer, reply_count`,
-        [title, body, tag, author]
+        [title, body, tag, author, currentUser.email, currentUser.role]
       );
 
       return res.status(201).json(toClientQuestion(result.rows[0]));
@@ -139,7 +169,9 @@ app.post('/api/questions', async (req, res) => {
     date: new Date().toLocaleDateString(),
     status: 'pending',
     answer: '',
-    replies: 0
+    replies: 0,
+    postedByEmail: currentUser.email,
+    postedByRole: currentUser.role
   };
 
   fallbackQuestions.unshift(createdQuestion);
@@ -149,11 +181,29 @@ app.post('/api/questions', async (req, res) => {
 
 app.delete('/api/questions/:id', async (req, res) => {
   const { id } = req.params;
+  const currentUser = getCurrentUserFromHeaders(req);
 
   if (useDatabase) {
     try {
+      const questionResult = await pool.query(
+        'SELECT posted_by_email, posted_by_role FROM questions WHERE id = $1',
+        [id]
+      );
+
+      if (questionResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Question not found' });
+      }
+
+      const question = questionResult.rows[0];
+      const isOwner = question.posted_by_email === currentUser.email;
+      const isLecturer = currentUser.role === 'lecturer';
+
+      if (!isOwner && !isLecturer) {
+        return res.status(403).json({ error: 'Only the poster or a lecturer can delete this question' });
+      }
+
       const result = await pool.query(
-        `DELETE FROM questions WHERE id = $1 RETURNING id`,
+        'DELETE FROM questions WHERE id = $1 RETURNING id',
         [id]
       );
 
@@ -168,13 +218,20 @@ app.delete('/api/questions/:id', async (req, res) => {
     }
   }
 
-  const originalLength = fallbackQuestions.length;
-  fallbackQuestions = fallbackQuestions.filter((question) => String(question.id) !== String(id));
-
-  if (fallbackQuestions.length === originalLength) {
+  const questionIndex = fallbackQuestions.findIndex(q => String(q.id) === String(id));
+  if (questionIndex === -1) {
     return res.status(404).json({ error: 'Question not found' });
   }
 
+  const question = fallbackQuestions[questionIndex];
+  const isOwner = question.author === 'You' || (question.postedByEmail && question.postedByEmail === currentUser.email);
+  const isLecturer = currentUser.role === 'lecturer';
+
+  if (!isOwner && !isLecturer) {
+    return res.status(403).json({ error: 'Only the poster or a lecturer can delete this question' });
+  }
+
+  fallbackQuestions.splice(questionIndex, 1);
   saveFallbackQuestions(fallbackQuestions);
   return res.status(204).send();
 });
