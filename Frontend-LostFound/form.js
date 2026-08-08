@@ -1,7 +1,6 @@
 
 function injectStaticIcons() {
   document.getElementById("backIcon").innerHTML = ICONS.chevronLeft;
-  document.getElementById("addImageIcon").innerHTML = ICONS.plus;
 }
 
 function wireStatusControls() {
@@ -18,37 +17,6 @@ function wireStatusControls() {
   });
 
   select.addEventListener("change", () => setStatus(select.value));
-}
-
-let selectedImageFile = null;
-
-function wireImagePicker() {
-  const addBtn = document.getElementById("addImageBtn");
-  const input = document.getElementById("imageInput");
-  const preview = document.getElementById("imagePreview");
-  const previewImg = document.getElementById("imagePreviewImg");
-  const removeBtn = document.getElementById("removeImage");
-
-  addBtn.addEventListener("click", () => input.click());
-
-  input.addEventListener("change", () => {
-    const file = input.files[0];
-    if (!file) return;
-    selectedImageFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-      preview.style.display = "block";
-    };
-    reader.readAsDataURL(file);
-  });
-
-  removeBtn.addEventListener("click", () => {
-    selectedImageFile = null;
-    input.value = "";
-    preview.style.display = "none";
-    previewImg.src = "";
-  });
 }
 
 // Accepts +233XXXXXXXXX or 0XXXXXXXXX (Ghana numbers)
@@ -126,7 +94,6 @@ function wireSubmit() {
       contact: document.getElementById('itemContact').value.trim(),
       postedBy: localStorage.getItem('myra_current_user_name') || 'You',
       postedByUser: localStorage.getItem('myra_current_user') || 'guest@myra.local',
-      imageFile: selectedImageFile || null,
     };
 
     try {
@@ -134,9 +101,6 @@ function wireSubmit() {
       showToast("Item posted successfully!");
       form.reset();
       document.getElementById("statusSelect").value = "lost";
-      document.getElementById("imagePreview").style.display = "none";
-      document.getElementById("imagePreviewImg").src = "";
-      selectedImageFile = null;
       setTimeout(() => {
         window.location.href = "LostFound.html";
       }, 900);
@@ -157,7 +121,6 @@ function wireSubmit() {
 function init() {
   injectStaticIcons();
   wireStatusControls();
-  wireImagePicker();
   wireSubmit();
 }
 

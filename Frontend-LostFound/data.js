@@ -34,6 +34,7 @@ async function getItems() {
       throw new Error('Unexpected response format');
     }
 
+    saveItems(data.items);
     return data.items.slice().sort((a, b) => {
       const aDate = new Date(a.createdAt || a.date || 0).getTime();
       const bDate = new Date(b.createdAt || b.date || 0).getTime();
@@ -79,10 +80,6 @@ async function createItem(payload) {
   formData.append('contact', payload.contact);
   formData.append('postedBy', payload.postedBy || 'You');
   formData.append('postedByUser', payload.postedByUser || localStorage.getItem('myra_current_user') || 'guest@myra.local');
-
-  if (payload.imageFile) {
-    formData.append('image', payload.imageFile, payload.imageFile.name);
-  }
 
   const headers = {};
   const currentUser = localStorage.getItem('myra_current_user');

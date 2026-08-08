@@ -550,12 +550,12 @@ function parseMultipartForm(req, contentType) {
     req.on('end', () => {
       try {
         const buffer = Buffer.concat(chunks);
-        const boundaryMatch = contentType.match(/boundary=(.+)$/i);
+        const boundaryMatch = contentType.match(/boundary=([^;]+)/i);
         if (!boundaryMatch) {
           return reject(new Error('Missing multipart boundary'));
         }
 
-        const boundary = boundaryMatch[1];
+        const boundary = boundaryMatch[1].replace(/^"|"$/g, '').trim();
         const boundaryBuffer = Buffer.from(`--${boundary}`);
         const parts = [];
         let offset = 0;
@@ -769,6 +769,10 @@ const server = http.createServer(async (req, res) => {
           }
           if (!payload.status || !payload.name || !payload.description || !payload.location || !payload.contact) {
             return sendJson(res, 400, { error: 'All required fields must be provided.' });
+          }
+
+          if (file) {
+            return sendJson(res, 400, { error: 'Image uploads are disabled for lost and found items.' });
           }
 
           const record = buildLostFoundRecord(payload, file, currentUser);
