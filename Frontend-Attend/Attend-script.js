@@ -68,25 +68,39 @@ async function onScanSuccess(decodedText) {
   lastScannedValue = value;
   document.getElementById('sessionCodeInput').value = value;
 
+  // verify session is active before attempting to mark
   const session = await fetchAttendanceSession(value);
   if (!session || !session.attendanceOpen) {
     showStatus('Attendance has ended or this code is not active right now.', true);
+    // keep scanner running so student can try another code
     return;
   }
 
-  const name = document.getElementById('studentNameInput').value.trim() || getSignedInName() || 'Student';
+  // visually indicate mark button is ready
+  const markBtn = document.getElementById('markAttendanceBtn');
+  markBtn?.classList.add('ready');
+
+  const nameInput = document.getElementById('studentNameInput');
+  const name = nameInput?.value.trim() || getSignedInName() || 'Student';
   const indexNumber = getSignedInIndexNumber();
   const markedSession = await postAttendance(value, name, indexNumber);
 
   if (markedSession) {
     showStatus(`QR scanned successfully. Attendance marked for ${name}.`);
   } else {
-    showStatus('Could not mark attendance. Please enter your name.', true);
+    showStatus('Could not mark attendance. Please check your profile or enter your name.', true);
   }
 
+  // after marking, stop scanner to avoid duplicate scans
   if (scannerInstance) {
-    scannerInstance.clear().catch(() => {});
+    try {
+      await scannerInstance.clear();
+    } catch (e) {
+      /* ignore */
+    }
+    scannerInstance = null;
   }
+  document.getElementById('markAttendanceBtn')?.classList.remove('scanner-on');
 }
 
 function onScanFailure(error) {
@@ -109,16 +123,20 @@ function startCamera() {
 
   const scannerOptions = {
     fps: 10,
-    qrbox: { width: 250, height: 250 },
-    showScanTypeSelector: false,
-    supportedScanTypes: window.Html5QrcodeScanType
-      ? [window.Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-      : undefined
+    qrbox: 250
   };
 
-  scannerInstance = new window.Html5QrcodeScanner('reader', scannerOptions, false);
-  scannerInstance.render(onScanSuccess, onScanFailure);
-  showStatus('Scanner ready. Point the camera at the lecturer QR code.');
+  try {
+    scannerInstance = new window.Html5QrcodeScanner('reader', scannerOptions, false);
+    scannerInstance.render(onScanSuccess, onScanFailure);
+    // indicate visually that scanner is active
+    document.getElementById('markAttendanceBtn')?.classList.add('scanner-on');
+    showStatus('Scanner ready. Point the camera at the lecturer QR code.');
+  } catch (err) {
+    console.error('Failed to start scanner', err);
+    showStatus('Unable to start camera. Check permissions and try again.', true);
+    scannerInstance = null;
+  }
 }
 
 function stopCamera() {
@@ -133,6 +151,7 @@ function stopCamera() {
   }
 
   showStatus('Scanner stopped.');
+  document.getElementById('markAttendanceBtn')?.classList.remove('scanner-on', 'ready');
 }
 
 async function handleManualMark() {
@@ -167,8 +186,15 @@ function renderStudentProfile() {
       ? `Signed in as ${signedInName}`
       : 'No account name detected. You can still enter your name manually.';
   }
-  if (input && signedInName && !input.value) {
-    input.value = signedInName;
+  if (input) {
+    if (signedInName) {
+      input.value = signedInName;
+      input.readOnly = true;
+      input.classList.add('readonly-locked');
+    } else if (!input.value) {
+      input.readOnly = false;
+      input.classList.remove('readonly-locked');
+    }
   }
 }
 

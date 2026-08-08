@@ -140,10 +140,12 @@ h1 {
 video,
 .scanner-reader {
   width: 100%;
-  min-height: 280px;
+  min-height: 320px;
   border-radius: 18px;
-  background: #2f4e96fa;
+  background: linear-gradient(180deg, rgba(47,78,150,0.9), rgba(7,58,112,0.85));
   object-fit: cover;
+  position: relative;
+  overflow: hidden;
 }
 
 .scanner-reader {
@@ -151,12 +153,56 @@ video,
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(2,6,23,0.12);
 }
 
 .scanner-reader video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.scanner-reader::after {
+  content: 'Align QR inside the box';
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  text-align: center;
+  color: rgba(255,255,255,0.9);
+  font-weight: 700;
+  background: linear-gradient(90deg, rgba(0,0,0,0.18), rgba(0,0,0,0.08));
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+/* visible scan area overlay */
+.scanner-reader .scan-overlay {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border: 3px dashed rgba(255,255,255,0.45);
+  border-radius: 12px;
+  box-shadow: 0 6px 30px rgba(2,6,23,0.28) inset;
+  pointer-events: none;
+}
+
+/* mark button when scanner is active */
+.primary-btn.scanner-on {
+  box-shadow: 0 6px 18px rgba(78,195,224,0.18);
+}
+
+.primary-btn.ready {
+  background: linear-gradient(90deg, #06b6d4, #0891b2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* locked name input */
+.readonly-locked {
+  background: rgba(255,255,255,0.6);
+  border-style: dashed;
 }
 
 .actions-row,

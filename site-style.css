@@ -73,6 +73,7 @@ body {
 
 /* Bottom nav normalized */
 .bottom-nav {
+  
   position: fixed;
   bottom: 5px;
 	left: 50%;
