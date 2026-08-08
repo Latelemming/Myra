@@ -133,7 +133,6 @@ function renderQrCode(value) {
 function openQrFullscreen() {
   const label = document.getElementById('sessionCodeLabel');
   const value = (label?.textContent || '').trim();
-
   if (!value || !window.QRCode) return;
 
   const overlay = document.createElement('div');
@@ -190,26 +189,26 @@ async function renderLecturer() {
 
   if (!session) {
     if (label) label.textContent = activeCode;
-    if (input && !input.value) input.value = activeCode;
+    if (input) input.value = activeCode;
+    if (attendanceNumberInput) attendanceNumberInput.value = '1';
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">Session not found on server.</td></tr>';
     isRendering = false;
     return;
   }
 
   const signature = JSON.stringify(session.students || []);
-  if (signature === lastAttendanceSignature && document.getElementById('attendanceTableBody')) {
+  if (signature === lastAttendanceSignature && session.code === getActiveSessionCode()) {
     isRendering = false;
     return;
   }
-
   lastAttendanceSignature = signature;
 
   const activeValue = session.code || session.id;
   if (label) label.textContent = activeValue;
-  if (input && !input.value) input.value = activeValue;
+  if (input) input.value = activeValue;
   if (attendanceNumberInput) attendanceNumberInput.value = session.attendanceNumber || '1';
-
   if (countLabel) countLabel.textContent = session.students?.length ? String(session.students.length) : '0';
+
   updateAttendanceButtons(session);
   renderQrCode(activeValue);
 
@@ -233,45 +232,54 @@ function downloadTxt() {
     return;
   }
 
-  const lines = session.students.map((entry) => `${entry.name}${entry.indexNumber ? ` - ${entry.indexNumber}` : ''}`);
+  const lines = [
+    `Session code: ${session.code}`,
+    `Attendance number: ${session.attendanceNumber}`,
+    `Exported: ${new Date().toLocaleString()}`,
+    ''
+  ];
+  session.students.forEach((entry) => {
+    lines.push(`${entry.name}${entry.indexNumber ? ` - ${entry.indexNumber}` : ''} | ${entry.timestamp}`);
+  });
+
   const content = lines.join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `Attendance_${session.id}.txt`;
+  anchor.download = `Attendance_${session.code || session.id}.txt`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
 
-function downloadPdf() {
+function downloadCsv() {
   const session = currentSession;
   if (!session || !session.students || !session.students.length) {
     alert('No attendance list to export yet.');
     return;
   }
 
-  if (!window.jspdf?.jsPDF) {
-    alert('PDF library not fully loaded. Check your internet connection.');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text('MYRA Attendance Report', 14, 20);
-  doc.setFontSize(11);
-  doc.text(`Session ID: ${session.id}`, 14, 32);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 40);
-
-  let y = 56;
+  const rows = [
+    ['Session code', session.code || ''],
+    ['Attendance number', session.attendanceNumber || ''],
+    ['Exported', new Date().toLocaleString()],
+    [],
+    ['Student name', 'Index number', 'Time']
+  ];
   session.students.forEach((entry) => {
-    const detail = entry.indexNumber ? `${entry.name} — ${entry.indexNumber}` : entry.name;
-    doc.text(`• ${detail}`, 14, y);
-    y += 8;
+    rows.push([entry.name, entry.indexNumber || '', entry.timestamp]);
   });
 
-  doc.save(`Attendance_${session.id}.pdf`);
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `Attendance_${session.code || session.id}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 async function createSession() {
@@ -323,19 +331,12 @@ async function resetSession() {
   }
 }
 
+function showError(message) {
+  alert(message);
+}
+
 function initialize() {
-  renderLecturer();
-
-  window.setInterval(() => {
-    const code = getActiveSessionCode();
-    if (code) {
-      renderLecturer();
-    }
-  }, 2000);
-
-  document.getElementById('generateQrBtn')?.addEventListener('click', () => {
-    createSession();
-  });
+  document.getElementById('generateQrBtn')?.addEventListener('click', createSession);
 
   const input = document.getElementById('qrTextInput');
   document.getElementById('confirmCodeBtn')?.addEventListener('click', async () => {
@@ -343,17 +344,14 @@ function initialize() {
     const code = getActiveSessionCode();
     if (!code) return;
     if (!value) {
-      alert('Enter a session code before confirming.');
+      showError('Enter a session code before confirming.');
       return;
     }
     if (currentSession?.attendanceOpen) {
-      alert('Stop the current attendance before changing the code.');
+      showError('Stop the current attendance before changing the code.');
       return;
     }
-
-    if (value === code) {
-      return;
-    }
+    if (value === code) return;
 
     const session = await updateAttendanceSessionOnServer({ code, newCode: value });
     if (session) {
@@ -363,11 +361,10 @@ function initialize() {
     }
   });
 
-  const attendanceNumberInput = document.getElementById('attendanceNumberInput');
-  attendanceNumberInput?.addEventListener('change', async () => {
+  document.getElementById('attendanceNumberInput')?.addEventListener('change', async () => {
     const code = getActiveSessionCode();
     if (!code) return;
-    const value = attendanceNumberInput.value.trim() || '1';
+    const value = document.getElementById('attendanceNumberInput').value.trim() || '1';
     const session = await updateAttendanceSessionOnServer({ code, attendanceNumber: value });
     if (session) {
       currentSession = session;
@@ -378,87 +375,21 @@ function initialize() {
   document.getElementById('qrContainer')?.addEventListener('click', openQrFullscreen);
   document.getElementById('startAttendanceBtn')?.addEventListener('click', startAttendance);
   document.getElementById('endAttendanceBtn')?.addEventListener('click', endAttendance);
-  document.getElementById('downloadCsvBtn')?.addEventListener('click', downloadTxt);
-  document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadPdf);
+  document.getElementById('downloadTxtBtn')?.addEventListener('click', downloadTxt);
+  document.getElementById('downloadCsvBtn')?.addEventListener('click', downloadCsv);
   document.getElementById('resetSessionBtn')?.addEventListener('click', resetSession);
+
+  renderLecturer();
 
   if (!getActiveSessionCode()) {
     createSession();
   }
-}
 
-document.addEventListener('DOMContentLoaded', initialize);
-
-function resetSession() {
-  const state = getState();
-  if (state.activeSessionId && state.sessions[state.activeSessionId]) {
-    if (confirm('Are you sure you want to clear the student list for this session?')) {
-      state.sessions[state.activeSessionId].students = [];
-      saveState(state);
+  setInterval(() => {
+    if (getActiveSessionCode()) {
       renderLecturer();
     }
-  }
-}
-
-function initialize() {
-  renderLecturer();
-
-  window.addEventListener('storage', () => {
-    renderLecturer();
-  });
-
-  window.setInterval(() => {
-    const session = getActiveSession();
-    const signature = JSON.stringify(session?.students || []);
-    if (signature !== lastAttendanceSignature) {
-      renderLecturer();
-    }
-  }, 1000);
-
-  document.getElementById('generateQrBtn')?.addEventListener('click', () => {
-    createSession();
-  });
-
-  const input = document.getElementById('qrTextInput');
-  document.getElementById('confirmCodeBtn')?.addEventListener('click', () => {
-    const value = input?.value.trim();
-    const state = getState();
-    const session = state.sessions[state.activeSessionId];
-    if (!session) return;
-    if (!value) {
-      alert('Enter a session code before confirming.');
-      return;
-    }
-    if (session.attendanceOpen) {
-      alert('Stop the current attendance before changing the code.');
-      return;
-    }
-    session.code = value;
-    saveState(state);
-    renderLecturer();
-  });
-
-  const attendanceNumberInput = document.getElementById('attendanceNumberInput');
-  attendanceNumberInput?.addEventListener('input', () => {
-    const state = getState();
-    const session = state.sessions[state.activeSessionId];
-    if (session) {
-      session.attendanceNumber = attendanceNumberInput.value.trim() || '1';
-      saveState(state);
-    }
-  });
-
-  document.getElementById('qrContainer')?.addEventListener('click', openQrFullscreen);
-
-  document.getElementById('startAttendanceBtn')?.addEventListener('click', startAttendance);
-  document.getElementById('endAttendanceBtn')?.addEventListener('click', endAttendance);
-  document.getElementById('downloadCsvBtn')?.addEventListener('click', downloadTxt);
-  document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadPdf);
-  document.getElementById('resetSessionBtn')?.addEventListener('click', resetSession);
-
-  if (!getActiveSession()) {
-    createSession();
-  }
+  }, 2000);
 }
 
 document.addEventListener('DOMContentLoaded', initialize);
