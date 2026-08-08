@@ -1,20 +1,29 @@
-const STORAGE_KEY = 'myra_attendance_state';
+const STORAGE_KEY = 'myra_attendance_session';
 let qrCodeInstance = null;
 let lastAttendanceSignature = '';
+let currentSession = null;
+let isRendering = false;
 
-function getState() {
+function getStoredSession() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return { activeSessionId: '', sessions: {} };
-
+  if (!raw) return { activeCode: '' };
   try {
     return JSON.parse(raw);
   } catch {
-    return { activeSessionId: '', sessions: {} };
+    return { activeCode: '' };
   }
 }
 
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveStoredSession(code) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeCode: String(code || '').trim() }));
+}
+
+function getActiveSessionCode() {
+  return String(getStoredSession().activeCode || '').trim();
+}
+
+function setActiveSessionCode(code) {
+  saveStoredSession(code);
 }
 
 function generateSessionCode() {
@@ -23,46 +32,79 @@ function generateSessionCode() {
   return `MYRA-${stamp}-${randomPart}`;
 }
 
-function createSession() {
-  const state = getState();
-  const sessionId = generateSessionCode();
-  state.activeSessionId = sessionId;
-  state.sessions[sessionId] = {
-    id: sessionId,
-    code: sessionId,
-    createdAt: new Date().toISOString(),
-    students: [],
-    attendanceOpen: false,
-    attendanceNumber: '1'
-  };
-  saveState(state);
-
-  const input = document.getElementById('qrTextInput');
-  if (input) {
-    input.value = sessionId;
-  }
-
-  const attendanceNumberInput = document.getElementById('attendanceNumberInput');
-  if (attendanceNumberInput) {
-    attendanceNumberInput.value = '1';
-  }
-
-  renderQrCode(sessionId);
-  renderLecturer();
-  return sessionId;
-}
-
-function getActiveSession() {
-  const state = getState();
-  if (!state.activeSessionId) return null;
-  return state.sessions[state.activeSessionId] || null;
-}
-
-function getSessionByCode(value) {
-  const state = getState();
-  const normalized = String(value || '').trim();
+async function fetchAttendanceSession(code) {
+  const normalized = String(code || '').trim();
   if (!normalized) return null;
-  return Object.values(state.sessions).find((session) => String(session.code || session.id) === normalized) || null;
+
+  try {
+    const response = await fetch(`/api/attendance?code=${encodeURIComponent(normalized)}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Failed to fetch session:', error);
+    return null;
+  }
+}
+
+async function createAttendanceSession(code, attendanceNumber = '1') {
+  try {
+    const response = await fetch('/api/attendance/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, attendanceNumber })
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to create session.');
+    }
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Create attendance session failed:', error);
+    alert(error.message || 'Unable to create attendance session.');
+    return null;
+  }
+}
+
+async function updateAttendanceSessionOnServer(payload) {
+  try {
+    const response = await fetch('/api/attendance/session', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to update attendance session.');
+    }
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Update attendance session failed:', error);
+    alert(error.message || 'Unable to update attendance session.');
+    return null;
+  }
+}
+
+async function resetAttendanceSession(code) {
+  try {
+    const response = await fetch('/api/attendance/session/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to reset session.');
+    }
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Reset attendance session failed:', error);
+    alert(error.message || 'Unable to reset attendance session.');
+    return null;
+  }
 }
 
 function renderQrCode(value) {
@@ -124,63 +166,68 @@ function updateAttendanceButtons(session) {
   endBtn.disabled = !session?.attendanceOpen;
 }
 
-function renderLecturer() {
-  const session = getActiveSession();
+async function renderLecturer() {
+  if (isRendering) return;
+  isRendering = true;
+
+  const activeCode = getActiveSessionCode();
   const label = document.getElementById('sessionCodeLabel');
   const input = document.getElementById('qrTextInput');
   const tableBody = document.getElementById('attendanceTableBody');
   const countLabel = document.getElementById('attendanceCountLabel');
   const attendanceNumberInput = document.getElementById('attendanceNumberInput');
-  const signature = JSON.stringify(session?.students || []);
 
+  if (!activeCode) {
+    if (label) label.textContent = '—';
+    if (input) input.value = '';
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">No active session. Click above to generate one.</td></tr>';
+    isRendering = false;
+    return;
+  }
+
+  const session = await fetchAttendanceSession(activeCode);
+  currentSession = session;
+
+  if (!session) {
+    if (label) label.textContent = activeCode;
+    if (input && !input.value) input.value = activeCode;
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">Session not found on server.</td></tr>';
+    isRendering = false;
+    return;
+  }
+
+  const signature = JSON.stringify(session.students || []);
   if (signature === lastAttendanceSignature && document.getElementById('attendanceTableBody')) {
+    isRendering = false;
     return;
   }
 
   lastAttendanceSignature = signature;
 
-  if (!session) {
-    if (label) label.textContent = '—';
-    if (tableBody) tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">No active session. Click above to generate one.</td></tr>';
-    return;
-  }
-
   const activeValue = session.code || session.id;
   if (label) label.textContent = activeValue;
-  if (input && !input.value) {
-    input.value = activeValue;
-  }
+  if (input && !input.value) input.value = activeValue;
+  if (attendanceNumberInput) attendanceNumberInput.value = session.attendanceNumber || '1';
 
-  const sessionCodeLabel = document.getElementById('sessionCodeLabel');
-  if (sessionCodeLabel) {
-    sessionCodeLabel.textContent = activeValue;
-  }
-
-  if (countLabel) {
-    countLabel.textContent = session.students?.length ? String(session.students.length) : '0';
-  }
-
-  if (attendanceNumberInput) {
-    attendanceNumberInput.value = session.attendanceNumber || '1';
-  }
-
+  if (countLabel) countLabel.textContent = session.students?.length ? String(session.students.length) : '0';
   updateAttendanceButtons(session);
   renderQrCode(activeValue);
 
   if (tableBody) {
     if (!session.students || !session.students.length) {
       tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">No students have scanned yet.</td></tr>';
-      return;
+    } else {
+      tableBody.innerHTML = session.students
+        .map((entry) => `<tr><td><strong>${entry.name}</strong></td><td>${entry.indexNumber || '—'}</td><td><span class="time-stamp">${entry.timestamp}</span></td></tr>`)
+        .join('');
     }
-
-    tableBody.innerHTML = session.students
-      .map((entry) => `<tr><td><strong>${entry.name}</strong></td><td>${entry.indexNumber || '—'}</td><td><span class="time-stamp">${entry.timestamp}</span></td></tr>`)
-      .join('');
   }
+
+  isRendering = false;
 }
 
 function downloadTxt() {
-  const session = getActiveSession();
+  const session = currentSession;
   if (!session || !session.students || !session.students.length) {
     alert('No attendance list to export yet.');
     return;
@@ -198,7 +245,7 @@ function downloadTxt() {
 }
 
 function downloadPdf() {
-  const session = getActiveSession();
+  const session = currentSession;
   if (!session || !session.students || !session.students.length) {
     alert('No attendance list to export yet.');
     return;
@@ -227,37 +274,120 @@ function downloadPdf() {
   doc.save(`Attendance_${session.id}.pdf`);
 }
 
-function startAttendance() {
-  const state = getState();
-  const session = state.sessions[state.activeSessionId];
+async function createSession() {
+  const sessionId = generateSessionCode();
+  const session = await createAttendanceSession(sessionId, '1');
   if (!session) return;
 
-  const code = String(session.code || session.id).trim();
-  const inputValue = document.getElementById('qrTextInput')?.value.trim();
+  setActiveSessionCode(sessionId);
+  document.getElementById('qrTextInput').value = sessionId;
+  document.getElementById('attendanceNumberInput').value = '1';
+  currentSession = session;
+  await renderLecturer();
+}
+
+async function startAttendance() {
+  const code = getActiveSessionCode();
   if (!code) {
     alert('Set a session code before starting attendance.');
     return;
   }
 
-  if (inputValue && inputValue !== code) {
-    alert('Please confirm the QR code before starting attendance.');
-    return;
+  const attendanceNumber = document.getElementById('attendanceNumberInput')?.value.trim() || '1';
+  const session = await updateAttendanceSessionOnServer({ code, attendanceOpen: true, attendanceNumber });
+  if (session) {
+    currentSession = session;
+    await renderLecturer();
   }
-
-  session.attendanceOpen = true;
-  saveState(state);
-  renderLecturer();
 }
 
-function endAttendance() {
-  const state = getState();
-  const session = state.sessions[state.activeSessionId];
-  if (!session) return;
-
-  session.attendanceOpen = false;
-  saveState(state);
-  renderLecturer();
+async function endAttendance() {
+  const code = getActiveSessionCode();
+  if (!code) return;
+  const session = await updateAttendanceSessionOnServer({ code, attendanceOpen: false });
+  if (session) {
+    currentSession = session;
+    await renderLecturer();
+  }
 }
+
+async function resetSession() {
+  const code = getActiveSessionCode();
+  if (!code) return;
+  if (!confirm('Are you sure you want to clear the student list for this session?')) return;
+
+  const session = await resetAttendanceSession(code);
+  if (session) {
+    currentSession = session;
+    await renderLecturer();
+  }
+}
+
+function initialize() {
+  renderLecturer();
+
+  window.setInterval(() => {
+    const code = getActiveSessionCode();
+    if (code) {
+      renderLecturer();
+    }
+  }, 2000);
+
+  document.getElementById('generateQrBtn')?.addEventListener('click', () => {
+    createSession();
+  });
+
+  const input = document.getElementById('qrTextInput');
+  document.getElementById('confirmCodeBtn')?.addEventListener('click', async () => {
+    const value = input?.value.trim();
+    const code = getActiveSessionCode();
+    if (!code) return;
+    if (!value) {
+      alert('Enter a session code before confirming.');
+      return;
+    }
+    if (currentSession?.attendanceOpen) {
+      alert('Stop the current attendance before changing the code.');
+      return;
+    }
+
+    if (value === code) {
+      return;
+    }
+
+    const session = await updateAttendanceSessionOnServer({ code, newCode: value });
+    if (session) {
+      setActiveSessionCode(value);
+      currentSession = session;
+      await renderLecturer();
+    }
+  });
+
+  const attendanceNumberInput = document.getElementById('attendanceNumberInput');
+  attendanceNumberInput?.addEventListener('change', async () => {
+    const code = getActiveSessionCode();
+    if (!code) return;
+    const value = attendanceNumberInput.value.trim() || '1';
+    const session = await updateAttendanceSessionOnServer({ code, attendanceNumber: value });
+    if (session) {
+      currentSession = session;
+      await renderLecturer();
+    }
+  });
+
+  document.getElementById('qrContainer')?.addEventListener('click', openQrFullscreen);
+  document.getElementById('startAttendanceBtn')?.addEventListener('click', startAttendance);
+  document.getElementById('endAttendanceBtn')?.addEventListener('click', endAttendance);
+  document.getElementById('downloadCsvBtn')?.addEventListener('click', downloadTxt);
+  document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadPdf);
+  document.getElementById('resetSessionBtn')?.addEventListener('click', resetSession);
+
+  if (!getActiveSessionCode()) {
+    createSession();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initialize);
 
 function resetSession() {
   const state = getState();

@@ -1,23 +1,5 @@
-const STORAGE_KEY = 'myra_attendance_state';
 let scannerInstance = null;
 let lastScannedValue = '';
-
-function getState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return { activeSessionId: '', sessions: {} };
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    return { activeSessionId: '', sessions: {} };
-  }
-}
-
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
 
 function getSignedInName() {
   return localStorage.getItem('myra_current_user_name') || localStorage.getItem('myra_current_full_name') || '';
@@ -27,50 +9,44 @@ function getSignedInIndexNumber() {
   return localStorage.getItem('myra_current_index_number') || '';
 }
 
-function getActiveSession() {
-  const state = getState();
-  if (!state.activeSessionId) return null;
-  return state.sessions[state.activeSessionId] || null;
-}
+async function fetchAttendanceSession(code) {
+  const normalized = String(code || '').trim();
+  if (!normalized) return null;
 
-function renderStudentProfile() {
-  const meta = document.getElementById('studentMeta');
-  const signedInName = getSignedInName();
-  const input = document.getElementById('studentNameInput');
-  if (meta) {
-    meta.textContent = signedInName
-      ? `Signed in as ${signedInName}`
-      : 'No account name detected. You can still enter your name manually.';
-  }
-  if (input && signedInName && !input.value) {
-    input.value = signedInName;
+  try {
+    const response = await fetch(`/api/attendance?code=${encodeURIComponent(normalized)}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Failed to load attendance session:', error);
+    return null;
   }
 }
 
-function markAttendance(sessionCode, name, indexNumber = '') {
-  const state = getState();
+async function postAttendance(sessionCode, name, indexNumber = '') {
   const normalizedSessionCode = String(sessionCode || '').trim();
+  if (!normalizedSessionCode || !name.trim()) return null;
 
-  if (!normalizedSessionCode) return false;
-
-  const session = Object.values(state.sessions).find((entry) => String(entry.code || entry.id) === normalizedSessionCode);
-  if (!session || !session.attendanceOpen) return false;
-
-  const normalizedName = name.trim();
-  if (!normalizedName) return false;
-
-  const existing = session.students.some((entry) => entry.name.toLowerCase() === normalizedName.toLowerCase());
-  if (!existing) {
-    session.students.unshift({
-      name: normalizedName,
-      indexNumber: String(indexNumber || '').trim(),
-      timestamp: new Date().toLocaleString()
+  try {
+    const response = await fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: normalizedSessionCode, name: name.trim(), indexNumber: String(indexNumber || '').trim() })
     });
-  }
 
-  state.activeSessionId = session.id;
-  saveState(state);
-  return true;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Unable to mark attendance.');
+    }
+
+    const data = await response.json();
+    return data.session || null;
+  } catch (error) {
+    console.warn('Attendance submission failed:', error);
+    showStatus(error.message || 'Unable to mark attendance right now.', true);
+    return null;
+  }
 }
 
 function showStatus(message, isError = false) {
@@ -80,28 +56,29 @@ function showStatus(message, isError = false) {
   status.style.color = isError ? '#dc2626' : '#64748b';
 }
 
-function hasMatchingSession(value) {
-  const session = Object.values(getState().sessions).find((entry) => String(entry.code || entry.id) === String(value || '').trim());
+async function hasMatchingSession(value) {
+  const session = await fetchAttendanceSession(value);
   return Boolean(session?.attendanceOpen);
 }
 
-function onScanSuccess(decodedText) {
+async function onScanSuccess(decodedText) {
   const value = decodedText.trim();
   if (!value || value === lastScannedValue) return;
-
-  if (!hasMatchingSession(value)) {
-    showStatus('Attendance has ended or this code is not active right now.', true);
-    return;
-  }
 
   lastScannedValue = value;
   document.getElementById('sessionCodeInput').value = value;
 
+  const session = await fetchAttendanceSession(value);
+  if (!session || !session.attendanceOpen) {
+    showStatus('Attendance has ended or this code is not active right now.', true);
+    return;
+  }
+
   const name = document.getElementById('studentNameInput').value.trim() || getSignedInName() || 'Student';
   const indexNumber = getSignedInIndexNumber();
-  const marked = markAttendance(value, name, indexNumber);
+  const markedSession = await postAttendance(value, name, indexNumber);
 
-  if (marked) {
+  if (markedSession) {
     showStatus(`QR scanned successfully. Attendance marked for ${name}.`);
   } else {
     showStatus('Could not mark attendance. Please enter your name.', true);
@@ -140,7 +117,6 @@ function startCamera() {
   };
 
   scannerInstance = new window.Html5QrcodeScanner('reader', scannerOptions, false);
-
   scannerInstance.render(onScanSuccess, onScanFailure);
   showStatus('Scanner ready. Point the camera at the lecturer QR code.');
 }
@@ -159,7 +135,7 @@ function stopCamera() {
   showStatus('Scanner stopped.');
 }
 
-function handleManualMark() {
+async function handleManualMark() {
   const value = document.getElementById('sessionCodeInput').value.trim();
   const name = document.getElementById('studentNameInput').value.trim() || getSignedInName();
   if (!value) {
@@ -167,17 +143,32 @@ function handleManualMark() {
     return;
   }
 
-  if (!hasMatchingSession(value)) {
+  const session = await fetchAttendanceSession(value);
+  if (!session || !session.attendanceOpen) {
     showStatus('Attendance has ended or this code is not active right now.', true);
     return;
   }
 
   const indexNumber = getSignedInIndexNumber();
-  const marked = markAttendance(value, name || 'Student', indexNumber);
-  if (marked) {
+  const markedSession = await postAttendance(value, name || 'Student', indexNumber);
+  if (markedSession) {
     showStatus(`Attendance marked for ${name || 'the student'}.`);
   } else {
     showStatus('Could not mark attendance. Please enter your name.', true);
+  }
+}
+
+function renderStudentProfile() {
+  const meta = document.getElementById('studentMeta');
+  const signedInName = getSignedInName();
+  const input = document.getElementById('studentNameInput');
+  if (meta) {
+    meta.textContent = signedInName
+      ? `Signed in as ${signedInName}`
+      : 'No account name detected. You can still enter your name manually.';
+  }
+  if (input && signedInName && !input.value) {
+    input.value = signedInName;
   }
 }
 

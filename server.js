@@ -120,6 +120,16 @@ try {
   console.warn('[Server] Warning initializing lost & found database:', error.message);
 }
 
+const attendanceDbPath = path.join(rootDir, 'Frontend-Attend', 'attendance.db');
+const attendanceDb = new DatabaseSync(attendanceDbPath);
+
+try {
+  ensureAttendanceStore();
+  console.log('[Server] Attendance database initialized');
+} catch (error) {
+  console.warn('[Server] Warning initializing attendance database:', error.message);
+}
+
 function ensureMaterialsStore() {
   fs.mkdirSync(materialsDir, { recursive: true });
   materialsDb.exec(`
@@ -181,6 +191,157 @@ function readMaterialsStore() {
     uploadedAt: row.uploadedAt,
     fileType: row.fileType
   }));
+}
+
+function ensureAttendanceStore() {
+  attendanceDb.exec(`
+    CREATE TABLE IF NOT EXISTS attendance_sessions (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      attendance_open INTEGER NOT NULL DEFAULT 0,
+      attendance_number TEXT NOT NULL DEFAULT '1',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS attendance_students (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      student_name TEXT NOT NULL,
+      index_number TEXT,
+      timestamp TEXT NOT NULL,
+      FOREIGN KEY(session_id) REFERENCES attendance_sessions(id)
+    );
+  `);
+}
+
+function readAttendanceSessionByCode(code) {
+  const normalized = String(code || '').trim();
+  if (!normalized) return null;
+
+  const session = attendanceDb.prepare(`
+    SELECT id, code, attendance_open, attendance_number, created_at
+    FROM attendance_sessions
+    WHERE code = ?
+    LIMIT 1
+  `).get(normalized);
+
+  if (!session) return null;
+
+  const students = attendanceDb.prepare(`
+    SELECT student_name AS name, index_number AS indexNumber, timestamp
+    FROM attendance_students
+    WHERE session_id = ?
+    ORDER BY timestamp DESC
+  `).all(session.id);
+
+  return {
+    id: session.id,
+    code: session.code,
+    attendanceOpen: Boolean(session.attendance_open),
+    attendanceNumber: String(session.attendance_number || '1'),
+    createdAt: session.created_at,
+    students
+  };
+}
+
+function createAttendanceSession({ code, attendanceOpen = false, attendanceNumber = '1' }) {
+  const id = `attendance-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  attendanceDb.prepare(`
+    INSERT INTO attendance_sessions (id, code, attendance_open, attendance_number, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, code, attendanceOpen ? 1 : 0, attendanceNumber, new Date().toISOString());
+  return readAttendanceSessionByCode(code);
+}
+
+function updateAttendanceSession(code, changes) {
+  const session = readAttendanceSessionByCode(code);
+  if (!session) return null;
+  const updated = {
+    attendance_open: changes.attendanceOpen !== undefined ? (changes.attendanceOpen ? 1 : 0) : (session.attendanceOpen ? 1 : 0),
+    attendance_number: changes.attendanceNumber !== undefined ? String(changes.attendanceNumber) : session.attendanceNumber
+  };
+  attendanceDb.prepare(`
+    UPDATE attendance_sessions
+    SET attendance_open = ?, attendance_number = ?
+    WHERE code = ?
+  `).run(updated.attendance_open, updated.attendance_number, code);
+  return readAttendanceSessionByCode(code);
+}
+
+function updateAttendanceSessionCode(oldCode, newCode) {
+  const existingSession = readAttendanceSessionByCode(oldCode);
+  if (!existingSession) return null;
+  const conflict = readAttendanceSessionByCode(newCode);
+  if (conflict) return null;
+  attendanceDb.prepare(`
+    UPDATE attendance_sessions
+    SET code = ?
+    WHERE code = ?
+  `).run(newCode, oldCode);
+  return readAttendanceSessionByCode(newCode);
+}
+
+function clearAttendanceStudents(sessionCode) {
+  const session = readAttendanceSessionByCode(sessionCode);
+  if (!session) return null;
+  attendanceDb.prepare(`
+    DELETE FROM attendance_students
+    WHERE session_id = ?
+  `).run(session.id);
+  return readAttendanceSessionByCode(sessionCode);
+}
+
+function addAttendanceStudent(sessionCode, studentName, indexNumber) {
+  const session = readAttendanceSessionByCode(sessionCode);
+  if (!session) return null;
+
+  const normalizedName = String(studentName || '').trim();
+  if (!normalizedName) return null;
+
+  const exists = attendanceDb.prepare(`
+    SELECT 1 FROM attendance_students
+    WHERE session_id = ? AND LOWER(student_name) = LOWER(?)
+    LIMIT 1
+  `).get(session.id, normalizedName);
+
+  if (exists) {
+    return session;
+  }
+
+  const studentId = `attendance-student-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  attendanceDb.prepare(`
+    INSERT INTO attendance_students (id, session_id, student_name, index_number, timestamp)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(studentId, session.id, normalizedName, String(indexNumber || '').trim(), new Date().toLocaleString());
+
+  return readAttendanceSessionByCode(sessionCode);
+}
+
+function getAttendanceSessionById(id) {
+  if (!id) return null;
+  const session = attendanceDb.prepare(`
+    SELECT id, code, attendance_open, attendance_number, created_at
+    FROM attendance_sessions
+    WHERE id = ?
+    LIMIT 1
+  `).get(id);
+  if (!session) return null;
+
+  const students = attendanceDb.prepare(`
+    SELECT student_name AS name, index_number AS indexNumber, timestamp
+    FROM attendance_students
+    WHERE session_id = ?
+    ORDER BY timestamp DESC
+  `).all(session.id);
+
+  return {
+    id: session.id,
+    code: session.code,
+    attendanceOpen: Boolean(session.attendance_open),
+    attendanceNumber: String(session.attendance_number || '1'),
+    createdAt: session.created_at,
+    students
+  };
 }
 
 function readLostFoundStore() {
@@ -448,6 +609,25 @@ function parseMultipartForm(req, contentType) {
   });
 }
 
+function parseJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks).toString('utf8').trim();
+        if (!raw) {
+          return resolve({});
+        }
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(new Error('Invalid JSON body'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
 function buildMaterialRecord(payload, fileInfo) {
   const id = `material-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const safeName = fileInfo ? path.basename(fileInfo.filename) : 'attachment';
@@ -605,6 +785,120 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: error.message || 'Unable to save item.' });
       });
     return;
+  }
+
+  if (url.pathname === '/api/attendance' && req.method === 'GET') {
+    const code = String(url.searchParams.get('code') || '').trim();
+    if (!code) {
+      return sendJson(res, 400, { error: 'Missing attendance code.' });
+    }
+
+    const session = readAttendanceSessionByCode(code);
+    if (!session) {
+      return sendJson(res, 404, { error: 'Session not found.' });
+    }
+
+    return sendJson(res, 200, { session });
+  }
+
+  if (url.pathname === '/api/attendance' && req.method === 'POST') {
+    try {
+      const payload = await parseJsonBody(req);
+      const code = String(payload.code || '').trim();
+      const name = String(payload.name || '').trim();
+      const indexNumber = String(payload.indexNumber || '').trim();
+
+      if (!code || !name) {
+        return sendJson(res, 400, { error: 'Attendance code and student name are required.' });
+      }
+
+      const session = readAttendanceSessionByCode(code);
+      if (!session || !session.attendanceOpen) {
+        return sendJson(res, 400, { error: 'Attendance is not active for this session.' });
+      }
+
+      const updatedSession = addAttendanceStudent(code, name, indexNumber);
+      if (!updatedSession) {
+        return sendJson(res, 400, { error: 'Student could not be added.' });
+      }
+
+      return sendJson(res, 200, { session: updatedSession });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message || 'Invalid JSON body.' });
+    }
+  }
+
+  if (url.pathname === '/api/attendance/session' && req.method === 'POST') {
+    try {
+      const payload = await parseJsonBody(req);
+      const code = String(payload.code || '').trim();
+      const attendanceNumber = String(payload.attendanceNumber || '1').trim();
+
+      if (!code) {
+        return sendJson(res, 400, { error: 'Attendance code is required.' });
+      }
+
+      const existing = readAttendanceSessionByCode(code);
+      if (existing) {
+        return sendJson(res, 400, { error: 'Session code already exists.' });
+      }
+
+      const session = createAttendanceSession({ code, attendanceOpen: false, attendanceNumber });
+      return sendJson(res, 200, { session });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message || 'Invalid JSON body.' });
+    }
+  }
+
+  if (url.pathname === '/api/attendance/session' && req.method === 'PUT') {
+    try {
+      const payload = await parseJsonBody(req);
+      const code = String(payload.code || '').trim();
+      const newCode = payload.newCode !== undefined ? String(payload.newCode || '').trim() : undefined;
+      const attendanceOpen = typeof payload.attendanceOpen === 'boolean' ? payload.attendanceOpen : undefined;
+      const attendanceNumber = payload.attendanceNumber !== undefined ? String(payload.attendanceNumber).trim() : undefined;
+
+      if (!code) {
+        return sendJson(res, 400, { error: 'Attendance code is required.' });
+      }
+
+      let updatedSession = updateAttendanceSession(code, { attendanceOpen, attendanceNumber });
+      if (!updatedSession) {
+        return sendJson(res, 404, { error: 'Session not found.' });
+      }
+
+      if (newCode) {
+        const renamedSession = updateAttendanceSessionCode(code, newCode);
+        if (!renamedSession) {
+          return sendJson(res, 400, { error: 'Unable to rename session code. It may already exist.' });
+        }
+        updatedSession = renamedSession;
+      }
+
+      return sendJson(res, 200, { session: updatedSession });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message || 'Invalid JSON body.' });
+    }
+  }
+
+  if (url.pathname === '/api/attendance/session/reset' && req.method === 'POST') {
+    try {
+      const payload = await parseJsonBody(req);
+      const code = String(payload.code || '').trim();
+
+      if (!code) {
+        return sendJson(res, 400, { error: 'Attendance code is required.' });
+      }
+
+      const updatedSession = clearAttendanceStudents(code);
+      if (!updatedSession) {
+        return sendJson(res, 404, { error: 'Session not found.' });
+      }
+
+      return sendJson(res, 200, { session: updatedSession });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message || 'Invalid JSON body.' });
+    }
   }
 
   if (url.pathname.startsWith('/api/lostfound/')) {
