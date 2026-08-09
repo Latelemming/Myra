@@ -100,10 +100,36 @@ const mimeTypes = {
 const materialsDir = path.join(rootDir, 'uploads', 'materials');
 const materialsDbPath = path.join(rootDir, 'Frontend-Acada', 'materials.db');
 const materialsDb = new DatabaseSync(materialsDbPath);
+const materialsDataFilePath = path.join(rootDir, 'Frontend-Acada', 'materials-data.json');
 
 const lostFoundDir = path.join(rootDir, 'uploads', 'lostfound');
 const lostFoundDbPath = path.join(rootDir, 'Frontend-LostFound', 'lostfound.db');
 const lostFoundDb = new DatabaseSync(lostFoundDbPath);
+const lostFoundDataFilePath = path.join(rootDir, 'Frontend-LostFound', 'lostfound-data.json');
+
+function loadJsonStore(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    const raw = fs.readFileSync(filePath, 'utf8').trim();
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn(`[Store] Could not load ${path.basename(filePath)}:`, error.message);
+    return [];
+  }
+}
+
+function saveJsonStore(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.warn(`[Store] Could not save ${path.basename(filePath)}:`, error.message);
+  }
+}
+
+let materialsFallbackStore = loadJsonStore(materialsDataFilePath);
+let lostFoundFallbackStore = loadJsonStore(lostFoundDataFilePath);
 
 // Initialize databases on startup
 try {
@@ -171,46 +197,62 @@ function ensureLostFoundStore() {
 }
 
 function readMaterialsStore() {
-  ensureMaterialsStore();
-  const rows = materialsDb.prepare(`
-    SELECT id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType
-    FROM materials
-    ORDER BY uploadedAt DESC
-  `).all();
+  try {
+    ensureMaterialsStore();
+    const rows = materialsDb.prepare(`
+      SELECT id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType
+      FROM materials
+      ORDER BY uploadedAt DESC
+    `).all();
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    course: row.course,
-    category: row.category,
-    dueDate: row.dueDate || '',
-    professor: row.professor || 'Lecturer',
-    fileName: row.fileName,
-    filePath: row.filePath,
-    uploadedAt: row.uploadedAt,
-    fileType: row.fileType
-  }));
+    const items = rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      course: row.course,
+      category: row.category,
+      dueDate: row.dueDate || '',
+      professor: row.professor || 'Lecturer',
+      fileName: row.fileName,
+      filePath: row.filePath,
+      uploadedAt: row.uploadedAt,
+      fileType: row.fileType
+    }));
+
+    materialsFallbackStore = items;
+    saveJsonStore(materialsDataFilePath, items);
+    return items;
+  } catch (error) {
+    console.warn('[Materials] SQLite read failed, using fallback store:', error.message);
+    return materialsFallbackStore.slice();
+  }
 }
 
 function writeMaterialRecord(record) {
-  ensureMaterialsStore();
-  materialsDb.prepare(`
-    INSERT INTO materials (id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    record.id,
-    record.title,
-    record.description,
-    record.course,
-    record.category,
-    record.dueDate || '',
-    record.professor || 'Lecturer',
-    record.fileName,
-    record.filePath,
-    record.uploadedAt,
-    record.fileType
-  );
+  try {
+    ensureMaterialsStore();
+    materialsDb.prepare(`
+      INSERT INTO materials (id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      record.id,
+      record.title,
+      record.description,
+      record.course,
+      record.category,
+      record.dueDate || '',
+      record.professor || 'Lecturer',
+      record.fileName,
+      record.filePath,
+      record.uploadedAt,
+      record.fileType
+    );
+  } catch (error) {
+    console.warn('[Materials] SQLite write failed, saving to fallback store:', error.message);
+  }
+
+  materialsFallbackStore = [record, ...materialsFallbackStore.filter((item) => item.id !== record.id)];
+  saveJsonStore(materialsDataFilePath, materialsFallbackStore);
 }
 
 function ensureAttendanceStore() {
@@ -374,7 +416,7 @@ function readLostFoundStore() {
     `).all();
     console.log(`[LostFound] Retrieved ${rows ? rows.length : 0} items from database`);
 
-    return rows.map((row) => ({
+    const items = rows.map((row) => ({
       id: row.id,
       status: row.status,
       name: row.name,
@@ -389,9 +431,13 @@ function readLostFoundStore() {
       imageUrl: row.image_url || '',
       createdAt: row.created_at
     }));
+
+    lostFoundFallbackStore = items;
+    saveJsonStore(lostFoundDataFilePath, items);
+    return items;
   } catch (error) {
     console.error('[LostFound] Error reading store:', error);
-    throw error;
+    return lostFoundFallbackStore.slice();
   }
 }
 
@@ -419,27 +465,39 @@ function writeLostFoundRecord(record) {
     console.log(`[LostFound] Item saved: ${record.id}`);
   } catch (error) {
     console.error('[LostFound] Error writing record:', error);
-    throw error;
   }
+
+  lostFoundFallbackStore = [record, ...lostFoundFallbackStore.filter((item) => item.id !== record.id)];
+  saveJsonStore(lostFoundDataFilePath, lostFoundFallbackStore);
 }
 
 function deleteLostFoundRecord(id) {
-  ensureLostFoundStore();
-  const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name, image_path FROM lost_found_posts WHERE id = ?').get(id);
-  if (!existing) {
-    return { deleted: false, row: null };
-  }
-
-  if (existing.image_path && fs.existsSync(existing.image_path)) {
-    try {
-      fs.unlinkSync(existing.image_path);
-    } catch (error) {
-      console.warn('Could not remove lostfound image:', error.message);
+  try {
+    ensureLostFoundStore();
+    const existing = lostFoundDb.prepare('SELECT posted_by, posted_by_name, image_path FROM lost_found_posts WHERE id = ?').get(id);
+    if (!existing) {
+      return { deleted: false, row: null };
     }
-  }
 
-  const result = lostFoundDb.prepare('DELETE FROM lost_found_posts WHERE id = ?').run(id);
-  return { deleted: result.changes > 0, row: existing };
+    if (existing.image_path && fs.existsSync(existing.image_path)) {
+      try {
+        fs.unlinkSync(existing.image_path);
+      } catch (error) {
+        console.warn('Could not remove lostfound image:', error.message);
+      }
+    }
+
+    const result = lostFoundDb.prepare('DELETE FROM lost_found_posts WHERE id = ?').run(id);
+    lostFoundFallbackStore = lostFoundFallbackStore.filter((item) => item.id !== id);
+    saveJsonStore(lostFoundDataFilePath, lostFoundFallbackStore);
+    return { deleted: result.changes > 0, row: existing };
+  } catch (error) {
+    console.warn('[LostFound] SQLite delete failed, updating fallback store:', error.message);
+    const wasPresent = lostFoundFallbackStore.some((item) => item.id === id);
+    lostFoundFallbackStore = lostFoundFallbackStore.filter((item) => item.id !== id);
+    saveJsonStore(lostFoundDataFilePath, lostFoundFallbackStore);
+    return { deleted: wasPresent, row: null };
+  }
 }
 
 function isAuthorizedLostFoundRequester(existingRow, currentUser, headerUser, headerName) {
@@ -495,22 +553,32 @@ function buildLostFoundRecord(payload, fileInfo, currentUser) {
 }
 
 function deleteMaterialRecord(id) {
-  ensureMaterialsStore();
-  const existing = materialsDb.prepare('SELECT filePath FROM materials WHERE id = ?').get(id);
-  if (!existing) {
-    return { deleted: false, filePath: null };
-  }
-
-  if (existing.filePath && fs.existsSync(existing.filePath)) {
-    try {
-      fs.unlinkSync(existing.filePath);
-    } catch (error) {
-      console.warn('Could not remove material file:', error.message);
+  try {
+    ensureMaterialsStore();
+    const existing = materialsDb.prepare('SELECT filePath FROM materials WHERE id = ?').get(id);
+    if (!existing) {
+      return { deleted: false, filePath: null };
     }
-  }
 
-  const result = materialsDb.prepare('DELETE FROM materials WHERE id = ?').run(id);
-  return { deleted: result.changes > 0, filePath: existing.filePath };
+    if (existing.filePath && fs.existsSync(existing.filePath)) {
+      try {
+        fs.unlinkSync(existing.filePath);
+      } catch (error) {
+        console.warn('Could not remove material file:', error.message);
+      }
+    }
+
+    const result = materialsDb.prepare('DELETE FROM materials WHERE id = ?').run(id);
+    materialsFallbackStore = materialsFallbackStore.filter((item) => item.id !== id);
+    saveJsonStore(materialsDataFilePath, materialsFallbackStore);
+    return { deleted: result.changes > 0, filePath: existing.filePath };
+  } catch (error) {
+    console.warn('[Materials] SQLite delete failed, updating fallback store:', error.message);
+    const wasPresent = materialsFallbackStore.some((item) => item.id === id);
+    materialsFallbackStore = materialsFallbackStore.filter((item) => item.id !== id);
+    saveJsonStore(materialsDataFilePath, materialsFallbackStore);
+    return { deleted: wasPresent, filePath: null };
+  }
 }
 
 function sendJson(res, statusCode, payload) {
