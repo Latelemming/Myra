@@ -18,10 +18,12 @@ function getCurrentUserFromHeaders(req) {
   const authPort = process.env.AUTH_PORT || 3101;
   const userEmail = req.headers['x-current-user'] || '';
   const userRole = req.headers['x-current-role'] || 'guest';
+  const userName = String(req.headers['x-current-user-name'] || '').trim();
   
   return {
     email: userEmail,
-    role: userRole.toLowerCase()
+    role: userRole.toLowerCase(),
+    name: userName
   };
 }
 
@@ -139,6 +141,7 @@ app.get('/api/questions', async (req, res) => {
 app.post('/api/questions', async (req, res) => {
   const { title, body, tag, author = 'You' } = req.body;
   const currentUser = getCurrentUserFromHeaders(req);
+  const resolvedAuthor = currentUser.name || author || 'You';
 
   if (!title || !body || !tag) {
     return res.status(400).json({ error: 'Title, body, and tag are required' });
@@ -150,7 +153,7 @@ app.post('/api/questions', async (req, res) => {
         `INSERT INTO questions (title, body, tag, author, posted_by_email, posted_by_role, status, reply_count)
          VALUES ($1, $2, $3, $4, $5, $6, 'pending', 0)
          RETURNING id, title, body, tag, author, created_at, status, answer, reply_count`,
-        [title, body, tag, author, currentUser.email, currentUser.role]
+        [title, body, tag, resolvedAuthor, currentUser.email, currentUser.role]
       );
 
       return res.status(201).json(toClientQuestion(result.rows[0]));
@@ -165,7 +168,7 @@ app.post('/api/questions', async (req, res) => {
     title,
     body,
     tag,
-    author,
+    author: resolvedAuthor,
     date: new Date().toLocaleDateString(),
     status: 'pending',
     answer: '',

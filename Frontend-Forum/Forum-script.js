@@ -250,12 +250,13 @@ document.getElementById('replyModal').addEventListener('click', function (e) {
 questionForm.addEventListener('submit', async function (e) {
     e.preventDefault();
 
+    const posterName = localStorage.getItem('myra_current_user_name') || 'Guest';
     const tagValue = questionTagInput.value.trim();
     const newQuestion = {
         title: questionTitleInput.value.trim(),
         body: questionBodyInput.value.trim(),
         tag: tagValue || 'General',
-        author: 'You'
+        author: posterName
     };
 
     if (!newQuestion.title || !newQuestion.body || !tagValue) return;
@@ -269,7 +270,8 @@ questionForm.addEventListener('submit', async function (e) {
             headers: { 
               'Content-Type': 'application/json',
               'X-Current-User': currentUser,
-              'X-Current-Role': currentRole
+              'X-Current-Role': currentRole,
+              'X-Current-User-Name': posterName
             },
             body: JSON.stringify(newQuestion)
         });
@@ -287,7 +289,7 @@ questionForm.addEventListener('submit', async function (e) {
             title: newQuestion.title,
             body: newQuestion.body,
             tag: newQuestion.tag,
-            author: 'You',
+            author: posterName,
             date: new Date().toLocaleDateString(),
             status: 'pending',
             answer: '',
