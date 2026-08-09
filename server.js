@@ -648,7 +648,7 @@ function parseJsonBody(req) {
   });
 }
 
-function buildMaterialRecord(payload, fileInfo) {
+function buildMaterialRecord(payload, fileInfo, currentUser) {
   const id = `material-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const safeName = fileInfo ? path.basename(fileInfo.filename) : 'attachment';
   const storedFileName = fileInfo ? `${id}-${safeName}` : '';
@@ -665,7 +665,7 @@ function buildMaterialRecord(payload, fileInfo) {
     course: payload.course || 'General',
     category: payload.category || 'lecture',
     dueDate: payload.dueDate || '',
-    professor: payload.professor || 'Lecturer',
+    professor: payload.professor || currentUser?.fullName || 'Lecturer',
     fileName: safeName,
     filePath: fileInfo ? storedPath : '',
     uploadedAt: new Date().toISOString(),
@@ -979,7 +979,7 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: 'Please provide a title, course, description, and file.' });
         }
 
-        const record = buildMaterialRecord(payload, file);
+        const record = buildMaterialRecord(payload, file, currentUser);
         writeMaterialRecord(record);
         return sendJson(res, 200, { material: record });
       })

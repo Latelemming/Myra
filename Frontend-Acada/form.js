@@ -156,7 +156,7 @@ function wireSubmit() {
       description: document.getElementById("materialDesc").value.trim(),
       category,
       dueDate: category === "assignment" ? document.getElementById("dueDateInput").value.trim() : null,
-      professor: "You", // TODO(backend): pull from the logged-in lecturer's session
+      professor: localStorage.getItem('myra_current_user_name') || 'Lecturer',
     };
 
     try {

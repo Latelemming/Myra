@@ -73,13 +73,16 @@ function notifyHomeAboutLostFound(item) {
 
 async function createItem(payload) {
   const formData = new FormData();
+  const posterName = payload.postedBy || localStorage.getItem('myra_current_user_name') || 'Guest';
+  const posterEmail = payload.postedByUser || localStorage.getItem('myra_current_user') || 'guest@myra.local';
+
   formData.append('status', payload.status);
   formData.append('name', payload.name);
   formData.append('description', payload.description);
   formData.append('location', payload.location);
   formData.append('contact', payload.contact);
-  formData.append('postedBy', payload.postedBy || 'You');
-  formData.append('postedByUser', payload.postedByUser || localStorage.getItem('myra_current_user') || 'guest@myra.local');
+  formData.append('postedBy', posterName);
+  formData.append('postedByUser', posterEmail);
 
   const headers = {};
   const currentUser = localStorage.getItem('myra_current_user');
@@ -106,6 +109,9 @@ async function createItem(payload) {
     throw new Error('Unexpected server response.');
   }
 
+  const existingItems = readItems();
+  const nextItems = [data.item, ...existingItems.filter((item) => item.id !== data.item.id)];
+  saveItems(nextItems);
   notifyHomeAboutLostFound(data.item);
   return data.item;
 }

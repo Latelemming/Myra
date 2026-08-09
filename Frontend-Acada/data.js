@@ -1,3 +1,25 @@
+const MATERIALS_STORAGE_KEY = 'academic-materials';
+
+function readMaterials() {
+  try {
+    const raw = window.localStorage.getItem(MATERIALS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn('Could not read academic materials from localStorage:', error);
+    return [];
+  }
+}
+
+function saveMaterials(items) {
+  try {
+    window.localStorage.setItem(MATERIALS_STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.warn('Could not save academic materials to localStorage:', error);
+  }
+}
+
 async function getCourses() {
   const response = await fetch('/api/materials/courses');
   if (!response.ok) throw new Error('Could not load courses');
@@ -6,10 +28,17 @@ async function getCourses() {
 }
 
 async function getMaterials() {
-  const response = await fetch('/api/materials');
-  if (!response.ok) throw new Error('Could not load materials');
-  const result = await response.json();
-  return result.materials || [];
+  try {
+    const response = await fetch('/api/materials');
+    if (!response.ok) throw new Error('Could not load materials');
+    const result = await response.json();
+    const materials = Array.isArray(result.materials) ? result.materials : [];
+    saveMaterials(materials);
+    return materials.slice().sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+  } catch (error) {
+    console.warn('Could not load materials from backend; using cached copy.', error);
+    return readMaterials().slice().sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+  }
 }
 
 async function uploadMaterial(payload, file) {
@@ -28,7 +57,14 @@ async function uploadMaterial(payload, file) {
     throw new Error(error || 'Upload failed');
   }
 
-  return response.json();
+  const data = await response.json();
+  if (data?.material) {
+    const existingMaterials = readMaterials();
+    const nextMaterials = [data.material, ...existingMaterials.filter((item) => item.id !== data.material.id)];
+    saveMaterials(nextMaterials);
+  }
+
+  return data;
 }
 
 async function deleteMaterial(id) {
