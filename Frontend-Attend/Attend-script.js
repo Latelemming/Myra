@@ -10,7 +10,7 @@ function getSignedInIndexNumber() {
 }
 
 async function fetchAttendanceSession(code) {
-  const normalized = String(code || '').trim();
+  const normalized = String(code || '').trim();///trim to remove empty spaces
   if (!normalized) return null;
 
   try {

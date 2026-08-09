@@ -193,6 +193,26 @@ function readMaterialsStore() {
   }));
 }
 
+function writeMaterialRecord(record) {
+  ensureMaterialsStore();
+  materialsDb.prepare(`
+    INSERT INTO materials (id, title, description, course, category, dueDate, professor, fileName, filePath, uploadedAt, fileType)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    record.id,
+    record.title,
+    record.description,
+    record.course,
+    record.category,
+    record.dueDate || '',
+    record.professor || 'Lecturer',
+    record.fileName,
+    record.filePath,
+    record.uploadedAt,
+    record.fileType
+  );
+}
+
 function ensureAttendanceStore() {
   attendanceDb.exec(`
     CREATE TABLE IF NOT EXISTS attendance_sessions (
