@@ -34,8 +34,6 @@ function validateForm() {
   const location = document.getElementById("itemLocation").value.trim();
   const contact = document.getElementById("itemContact").value.trim();
   const status = document.getElementById("statusSelect").value;
-  const imageEl = document.getElementById('itemImage');
-  const imageFile = imageEl && imageEl.files && imageEl.files[0] ? imageEl.files[0] : null;
 
   let valid = true;
 
@@ -54,17 +52,6 @@ function validateForm() {
   const contactValid = isValidGhanaPhone(contact);
   setFieldError("contactField", !contactValid);
   if (!contactValid) valid = false;
-
-  // Validate image if provided: must be an image and <= 5MB
-  if (imageFile) {
-    const allowed = imageFile.type && imageFile.type.startsWith('image/');
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const sizeOk = imageFile.size <= maxSize;
-    setFieldError('imageField', !(allowed && sizeOk));
-    if (!allowed || !sizeOk) valid = false;
-  } else {
-    setFieldError('imageField', false);
-  }
 
   return valid;
 }
@@ -98,9 +85,6 @@ function wireSubmit() {
     submitBtn.disabled = true;
     submitBtn.textContent = "Posting…";
 
-    const imageEl = document.getElementById('itemImage');
-    const imageFile = imageEl && imageEl.files && imageEl.files[0] ? imageEl.files[0] : null;
-
     const payload = {
       status: document.getElementById('statusSelect').value,
       name: document.getElementById('itemName').value.trim(),
@@ -109,7 +93,6 @@ function wireSubmit() {
       contact: document.getElementById('itemContact').value.trim(),
       postedBy: localStorage.getItem('myra_current_user_name') || 'You',
       postedByUser: localStorage.getItem('myra_current_user') || 'guest@myra.local',
-      imageFile,
     };
 
     try {
