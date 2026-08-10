@@ -1,5 +1,14 @@
 let scannerInstance = null;
 let lastScannedValue = '';
+let lastScanTimeout = null;
+
+function resetLastScannedValue() {
+  lastScannedValue = '';
+  if (lastScanTimeout) {
+    clearTimeout(lastScanTimeout);
+    lastScanTimeout = null;
+  }
+}
 
 function getSignedInName() {
   return localStorage.getItem('myra_current_user_name') || localStorage.getItem('myra_current_full_name') || '';
@@ -63,9 +72,14 @@ async function hasMatchingSession(value) {
 
 async function onScanSuccess(decodedText) {
   const value = decodedText.trim();
-  if (!value || value === lastScannedValue) return;
+  if (!value) return;
+
+  if (value === lastScannedValue) {
+    return;
+  }
 
   lastScannedValue = value;
+  lastScanTimeout = setTimeout(resetLastScannedValue, 2500);
   document.getElementById('sessionCodeInput').value = value;
 
   // verify session is active before attempting to mark
@@ -101,6 +115,7 @@ async function onScanSuccess(decodedText) {
     scannerInstance = null;
   }
   document.getElementById('markAttendanceBtn')?.classList.remove('scanner-on');
+  resetLastScannedValue();
 }
 
 function onScanFailure(error) {
@@ -120,6 +135,8 @@ function startCamera() {
     showStatus('Scanner is already active.');
     return;
   }
+
+  resetLastScannedValue();
 
   const scannerOptions = {
     fps: 10,
@@ -144,6 +161,8 @@ function stopCamera() {
     scannerInstance.clear().catch(() => {});
     scannerInstance = null;
   }
+
+  resetLastScannedValue();
 
   const reader = document.getElementById('reader');
   if (reader) {
