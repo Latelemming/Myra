@@ -94,7 +94,9 @@ const mimeTypes = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp'
 };
 
 const materialsDir = path.join(rootDir, 'uploads', 'materials');
@@ -680,7 +682,13 @@ function parseMultipartForm(req, contentType) {
           const [, fieldName, filename] = dispositionMatch;
           if (filename) {
             const safeName = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '_');
-            file = { fieldName, filename: safeName, data: bodyBuffer };
+            const contentTypeMatch = headerText.match(/content-type:\s*([^\r\n]+)/i);
+            file = {
+              fieldName,
+              filename: safeName,
+              data: bodyBuffer,
+              contentType: contentTypeMatch ? contentTypeMatch[1].trim().toLowerCase() : 'application/octet-stream'
+            };
             return;
           }
 
@@ -860,7 +868,15 @@ const server = http.createServer(async (req, res) => {
           }
 
           if (file) {
-            return sendJson(res, 400, { error: 'Image uploads are disabled for lost and found items.' });
+            const acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!acceptedTypes.includes(file.contentType)) {
+              return sendJson(res, 400, { error: 'Only JPG, PNG, GIF, or WEBP images are allowed.' });
+            }
+
+            const maxFileSize = 5 * 1024 * 1024;
+            if (file.data.length > maxFileSize) {
+              return sendJson(res, 400, { error: 'Image must be smaller than 5MB.' });
+            }
           }
 
           const record = buildLostFoundRecord(payload, file, currentUser);

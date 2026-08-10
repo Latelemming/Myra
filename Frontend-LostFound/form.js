@@ -35,6 +35,8 @@ function validateForm() {
   const location = document.getElementById("itemLocation").value.trim();
   const contact = document.getElementById("itemContact").value.trim();
   const status = document.getElementById("statusSelect").value;
+  const imageInput = document.getElementById('itemImage');
+  const imageFile = imageInput.files[0];
 
   let valid = true;
 
@@ -54,6 +56,16 @@ function validateForm() {
   setFieldError("contactField", !contactValid);
   if (!contactValid) valid = false;
 
+  if (imageFile) {
+    const acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const tooLarge = imageFile.size > 5 * 1024 * 1024;
+    const invalidType = !acceptedTypes.includes(imageFile.type);
+    setFieldError('imageField', tooLarge || invalidType);
+    if (tooLarge || invalidType) valid = false;
+  } else {
+    setFieldError('imageField', false);
+  }
+
   return valid;
 }
 
@@ -67,6 +79,28 @@ function showToast(message) {
 function wireSubmit() {
   const form = document.getElementById("postForm");
   const submitBtn = document.getElementById("submitBtn");
+  const imageInput = document.getElementById('itemImage');
+  const imagePreview = document.getElementById('imagePreview');
+  const previewImage = document.getElementById('previewImage');
+  const removeImageBtn = document.getElementById('removeImageBtn');
+
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files[0];
+    if (!file) {
+      imagePreview.style.display = 'none';
+      previewImage.src = '';
+      return;
+    }
+
+    previewImage.src = URL.createObjectURL(file);
+    imagePreview.style.display = 'block';
+  });
+
+  removeImageBtn.addEventListener('click', () => {
+    imageInput.value = '';
+    previewImage.src = '';
+    imagePreview.style.display = 'none';
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -94,6 +128,7 @@ function wireSubmit() {
       contact: document.getElementById('itemContact').value.trim(),
       postedBy: localStorage.getItem('myra_current_user_name') || 'You',
       postedByUser: localStorage.getItem('myra_current_user') || 'guest@myra.local',
+      imageFile: imageInput.files[0] || null,
     };
 
     try {
@@ -101,6 +136,8 @@ function wireSubmit() {
       showToast("Item posted successfully!");
       form.reset();
       document.getElementById("statusSelect").value = "lost";
+      imagePreview.style.display = 'none';
+      previewImage.src = '';
       setTimeout(() => {
         window.location.href = "LostFound.html";
       }, 900);

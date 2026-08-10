@@ -53,6 +53,17 @@
         <div class="field-error-msg">Enter a valid Ghana number, e.g. +233201234567.</div>
       </div>
 
+      <div class="field" id="imageField">
+        <label for="itemImage">Add an image (optional)</label>
+        <input type="file" id="itemImage" accept="image/jpeg,image/png,image/gif,image/webp" />
+        <div class="field-error-msg">Supported formats: JPG, PNG, GIF, WEBP. Max 5MB.</div>
+      </div>
+
+      <div class="image-preview" id="imagePreview">
+        <img id="previewImage" alt="Image preview" />
+        <button type="button" class="remove-image" id="removeImageBtn" title="Remove image">×</button>
+      </div>
+
       <button type="submit" class="submit-btn" id="submitBtn">Post item</button>
     </form>
   </div>

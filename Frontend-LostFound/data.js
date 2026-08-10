@@ -84,6 +84,10 @@ async function createItem(payload) {
   formData.append('postedBy', posterName);
   formData.append('postedByUser', posterEmail);
 
+  if (payload.imageFile) {
+    formData.append('image', payload.imageFile, payload.imageFile.name);
+  }
+
   const headers = {};
   const currentUser = localStorage.getItem('myra_current_user');
   if (currentUser) {
