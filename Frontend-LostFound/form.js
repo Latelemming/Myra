@@ -1,4 +1,3 @@
-
 function injectStaticIcons() {
   document.getElementById("backIcon").innerHTML = ICONS.chevronLeft;
 }
